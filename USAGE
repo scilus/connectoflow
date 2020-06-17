@@ -1,0 +1,56 @@
+FreeSurfer pipeline
+===================
+
+Run recon-all on all encountered subjects
+
+USAGE
+
+nextflow run main.nf [OPTIONAL_ARGUMENTS] --root
+
+DESCRIPTION
+
+    --root=/path/to/[root]     Root folder containing multiple subjects
+                                                [root]
+                                                ├── S1
+                                                │   │── tracking.nii.gz
+                                                │   │── label.nii.gz
+                                                │   │── dwi.nii.gz (optional)
+                                                │   │── dwi.bval (optional)
+                                                │   │── dwi.bvec (optional)
+                                                │   │── peaks.nii.gz (optional)
+                                                │   │── anat.nii.gz
+                                                |   └── metrics
+                                                |       └── *.nii.gz
+                                                └── S2
+                                                    └── *
+
+    --template                                  Template used for registration in a common space for similarity/viz
+
+OPTIONAL ARGUMENTS (current value)
+    --tracking_ext                              Extension for the input tractogram ($tracking_ext)
+
+    --run_commit                                Run COMMIT on the tractogram ($run_commit)
+    --b_thr                                     Tolerance value to match b-value is on the same shell ($b_thr)
+    --nbr_dir                                   Number of directions, (half sphere), representing the possible orientations of the response functions ($nbr_dir)
+    --ball_stick                                Use the ball&Stick model. Disable the zeppelin compartment for single-shell data ($ball_stick)
+    --para_diff                                 Parallel diffusivity in mm^2/s ($para_diff)
+    --perp_diff                                 Perpendicular diffusivity in mm^2/s ($perp_diff)
+    --iso_diff                                  Istropic diffusivity in mm^2/s ($iso_diff)
+
+    --register_processes                        Number of processes for registration task ($register_processes).
+    --processes_commit                          Number of processes for COMMIT task ($register_processes).
+    --processes_avg_similarity                  Number of processes for average similarity task ($register_processes).
+    --compute_connectivity                      Number of processes for compute connectivity task ($register_processes).
+
+NOTES
+
+To set the number of parallel processes to launch, please use:
+'nextflow run -qs {nb_processes}'.
+
+The intermediate working directory is, by default, set to './work'.
+To change it, use the '-w WORK_DIR' argument.
+
+The default config file is freesurfer_pipeline/nextflow.config.
+Use '-C config_file.config' to specify a non-default configuration file.
+The '-C config_file.config' must be inserted after the nextflow call
+like 'nextflow -C config_file.config run ...'.
