@@ -70,8 +70,7 @@ template
 in_opt_metrics = Channel
     .fromFilePairs("$root/**/metrics/*.nii.gz",
                     size: -1,
-                    maxDepth:2,
-                    flat: true) {it.parent.parent.name}
+                    maxDepth:2) {it.parent.parent.name}
 
 in_opt_data = Channel
     .fromFilePairs("$root/**/{*dwi.bval,*dwi.bvec,*dwi.nii.gz,*peaks.nii.gz}",
@@ -166,23 +165,23 @@ process Run_COMMIT {
     """
 }
 
-
 in_opt_metrics
-    .join(transformation_for_metrics)
+    .flatMap{ sid, metrics -> metrics.collect{ [sid, it] } }
+    .combine(transformation_for_metrics, by: 0)
     .combine(template_for_apply_metrics)
     .set{metrics_transformation_for_metrics}
 process Transform_Metrics {
+    cpus 1
+
     input:
-    set sid, file(metrics), file(transfo), file(warp), file(inverse_warp), file(template) from metrics_transformation_for_metrics
+    set sid, file(metric), file(transfo), file(warp), file(inverse_warp), file(template) from metrics_transformation_for_metrics
 
     output:
     set sid, "*_warped.nii.gz" into metrics_for_compute
 
     script:
     """
-    for metric in $metrics; do
-        antsApplyTransforms -d 3 -i \$metric -r $template -t $warp $transfo -o \${metric/.nii.gz/_warped.nii.gz}
-    done
+    antsApplyTransforms -d 3 -i $metric -r $template -t $warp $transfo -o ${metric.getSimpleName()}_warped.nii.gz
     """
 }
 
