@@ -12,8 +12,6 @@ if(params.help) {
                 "para_diff":"$params.para_diff",
                 "perp_diff":"$params.perp_diff",
                 "iso_diff":"$params.iso_diff",
-                "run_commit":"$params.run_commit",
-                "run_commit":"$params.run_commit",
                 "register_processes":"$params.register_processes",
                 "processes_commit":"$params.processes_commit",
                 "processes_avg_similarity":"$params.processes_avg_similarity",
@@ -129,16 +127,12 @@ if (!params.run_commit) {
     tracking_for_commit
         .into{tracking_for_registration}
 }
-
+else {
 data_for_commit
     .join(tracking_for_commit)
     .set{data_tracking_for_commit}
-        b_thr = 50
-        nbr_dir = 500
-        ball_stick = false
-        para_diff = "1.7E-3"
-        perp_diff = "1.19E-3 0.85E-3 0.51E-3 0.17E-3"
-        iso_diff = "1.7E-3 3.0E-3"
+}
+
 process Run_COMMIT {
     cpus params.processes_commit
 
@@ -147,7 +141,7 @@ process Run_COMMIT {
 
     output:
     set sid, "${sid}__results_bzs/"
-    set sid, "essential_tractogram.trk" into tracking_for_registration
+    set sid, "${sid}__essential_tractogram.trk" into tracking_for_registration
 
     when:
     params.run_commit
@@ -161,7 +155,7 @@ process Run_COMMIT {
     scil_compute_streamlines_density_map.py $tracking tracking_mask.nii.gz --binary
     scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks --in_tracking_mask tracking_mask.nii.gz --processes $params.processes_commit \
         --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg --para_diff $params.para_diff --perp_diff $params.perp_diff --iso_diff $params.iso_diff
-    cp ${sid}__results_bzs/essential_tractogram.trk ./
+    cp ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
     """
 }
 
@@ -266,5 +260,7 @@ process Compute_Connectivity {
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
     done
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \${metrics_args} --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
+    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
+    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
 }
