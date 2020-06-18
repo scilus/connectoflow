@@ -63,7 +63,7 @@ template = Channel.fromPath("$template")
 in_labels_list = Channel.fromPath("$root/*labels_list.txt")
 
 template
-    .into{template_for_registration;template_for_apply_data;template_for_apply_metrics}
+    .into{template_for_transformation;template_for_transformation_data;template_for_transformation_metrics}
 
 in_opt_metrics = Channel
     .fromFilePairs("$root/**/metrics/*.nii.gz",
@@ -77,7 +77,7 @@ in_opt_data = Channel
                     flat: true) {it.parent.name}
 
 
-(anat_for_registration, tracking_for_ic, labels_for_registration) = in_data
+(anat_for_transformation, tracking_for_ic, labels_for_transformation) = in_data
     .map{sid, anat, labels, tracking -> 
         [tuple(sid, anat),
         tuple(sid, tracking, anat),
@@ -90,13 +90,13 @@ in_opt_data = Channel
     .separate(1)
 
 
-anat_for_registration
-    .combine(template_for_registration)
-    .set{anats_for_registration}
+anat_for_transformation
+    .combine(template_for_transformation)
+    .set{anats_for_transformation}
 process Register_Anat {
     cpus params.register_processes
     input:
-    set sid, file(native_anat), file(template) from anats_for_registration
+    set sid, file(native_anat), file(template) from anats_for_transformation
 
     output:
     set sid, "${sid}__output0GenericAffine.mat", "${sid}__output1Warp.nii.gz", "${sid}__output1InverseWarp.nii.gz"  into transformation_for_data, transformation_for_metrics
@@ -125,12 +125,14 @@ process Remove_IC {
 
 if (!params.run_commit) {
     tracking_for_commit
-        .into{tracking_for_registration}
+        .set{tracking_for_skip}
+    data_tracking_for_commit = Channel.empty()
 }
 else {
-data_for_commit
-    .join(tracking_for_commit)
-    .set{data_tracking_for_commit}
+    data_for_commit
+        .join(tracking_for_commit)
+        .set{data_tracking_for_commit}
+    tracking_for_skip = Channel.empty()
 }
 
 process Run_COMMIT {
@@ -141,7 +143,7 @@ process Run_COMMIT {
 
     output:
     set sid, "${sid}__results_bzs/"
-    set sid, "${sid}__essential_tractogram.trk" into tracking_for_registration
+    set sid, "${sid}__essential_tractogram.trk" into tracking_for_transformation
 
     when:
     params.run_commit
@@ -162,7 +164,7 @@ process Run_COMMIT {
 in_opt_metrics
     .flatMap{ sid, metrics -> metrics.collect{ [sid, it] } }
     .combine(transformation_for_metrics, by: 0)
-    .combine(template_for_apply_metrics)
+    .combine(template_for_transformation_metrics)
     .set{metrics_transformation_for_metrics}
 process Transform_Metrics {
     cpus 1
@@ -179,10 +181,11 @@ process Transform_Metrics {
     """
 }
 
-tracking_for_registration
-    .join(labels_for_registration)
+tracking_for_transformation
+    .concat(tracking_for_skip)
+    .join(labels_for_transformation)
     .join(transformation_for_data)
-    .combine(template_for_apply_data)
+    .combine(template_for_transformation_data)
     .set{labels_tracking_transformation_for_data}
 process Transform_Data {
     input:
@@ -259,7 +262,7 @@ process Compute_Connectivity {
     for metric in $metrics; do
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
     done
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \${metrics_args} --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \${metrics_args} --density_weighting --no_self_connection --include_dps --processes $params.compute_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
