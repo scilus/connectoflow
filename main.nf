@@ -206,7 +206,7 @@ process Compute_AFD_RD {
     if $params.length_weighting; then
         length_weighting_arg="--length_weighting"
     fi
-    scil_compute_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.trk" \$length_weighting_arg --sh_basis $params.sh_basis --processes $params.processes_afd_rd
+    scil_compute_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.h5" \$length_weighting_arg --sh_basis $params.sh_basis --processes $params.processes_afd_rd
     """
 }
 
