@@ -210,11 +210,6 @@ process Compute_AFD_RD {
     """
 }
 
-if (!params.run_afd_rd) {
-    h5_for_skip
-        .set{h5_for_transformation}
-}
-
 in_opt_metrics
     .flatMap{ sid, metrics -> metrics.collect{ [sid, it] } }
     .combine(transformation_for_metrics, by: 0)
@@ -233,6 +228,11 @@ process Transform_Metrics {
     """
     antsApplyTransforms -d 3 -i $metric -r $template -t $warp $transfo -o ${metric.getSimpleName()}_warped.nii.gz
     """
+}
+
+if (!params.run_afd_rd) {
+    h5_for_skip
+        .set{h5_for_transformation}
 }
 
 h5_for_transformation
