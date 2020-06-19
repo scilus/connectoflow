@@ -5,6 +5,8 @@ if(params.help) {
     cpu_count = Runtime.runtime.availableProcessors()
 
     bindings = ["tracking_ext":"$params.tracking_ext",
+                "length_weighting":"$params.length_weighting",
+                "sh_basis":"$params.sh_basis",
                 "run_commit":"$params.run_commit",
                 "b_thr":"$params.b_thr",
                 "nbr_dir":"$params.nbr_dir",
@@ -14,6 +16,7 @@ if(params.help) {
                 "iso_diff":"$params.iso_diff",
                 "register_processes":"$params.register_processes",
                 "processes_commit":"$params.processes_commit",
+                "processes_afd_rd":"$params.processes_afd_rd",
                 "processes_avg_similarity":"$params.processes_avg_similarity",
                 "compute_connectivity":"$params.compute_connectivity"]
 
@@ -57,13 +60,17 @@ in_data = Channel
                     size: 3,
                     maxDepth:1,
                     flat: true) {it.parent.name}
-template = file(params.template)
-template = Channel.fromPath("$template")
 
-in_labels_list = Channel.fromPath("$root/*labels_list.txt")
-
-template
+Channel.fromPath(file(params.template))
     .into{template_for_transformation;template_for_transformation_data;template_for_transformation_metrics}
+
+labels_list_for_compute = Channel.fromPath("$root/*labels_list.txt")
+
+fodf_for_afd_rd = Channel
+    .fromFilePairs("$root/**/{*fodf.nii.gz,}",
+                    size: 1,
+                    maxDepth:1,
+                    flat: true) {it.parent.name}
 
 in_opt_metrics = Channel
     .fromFilePairs("$root/**/metrics/*.nii.gz",
@@ -77,18 +84,18 @@ in_opt_data = Channel
                     flat: true) {it.parent.name}
 
 
-(anat_for_transformation, tracking_for_ic, labels_for_transformation) = in_data
+(anat_for_transformation, tracking_anat_for_ic, labels_for_transformation, labels_for_decompose) = in_data
     .map{sid, anat, labels, tracking -> 
         [tuple(sid, anat),
         tuple(sid, tracking, anat),
+        tuple(sid, labels),
         tuple(sid, labels)]}
-    .separate(3)
+    .separate(4)
 
 (data_for_commit) = in_opt_data
     .map{sid, bval, bvec, dwi, peaks -> 
         [tuple(sid, bval, bvec, dwi, peaks)]}
     .separate(1)
-
 
 anat_for_transformation
     .combine(template_for_transformation)
@@ -112,10 +119,10 @@ process Remove_IC {
     cpus 1
 
     input:
-    set sid, file(tracking), file(ref) from tracking_for_ic
+    set sid, file(tracking), file(ref) from tracking_anat_for_ic
 
     output:
-    set sid, "${sid}__tracking_ic.trk" into tracking_for_commit
+    set sid, "${sid}__tracking_ic.trk" into tracking_for_commit, tracking_for_skip
 
     script:
     """
@@ -123,17 +130,9 @@ process Remove_IC {
     """
 }
 
-if (!params.run_commit) {
-    tracking_for_commit
-        .set{tracking_for_skip}
-    data_tracking_for_commit = Channel.empty()
-}
-else {
-    data_for_commit
-        .join(tracking_for_commit)
-        .set{data_tracking_for_commit}
-    tracking_for_skip = Channel.empty()
-}
+data_for_commit
+    .join(tracking_for_commit)
+    .set{data_tracking_for_commit}
 
 process Run_COMMIT {
     cpus params.processes_commit
@@ -143,7 +142,7 @@ process Run_COMMIT {
 
     output:
     set sid, "${sid}__results_bzs/"
-    set sid, "${sid}__essential_tractogram.trk" into tracking_for_transformation
+    set sid, "${sid}__essential_tractogram.trk" into tracking_for_decompose
 
     when:
     params.run_commit
@@ -159,6 +158,61 @@ process Run_COMMIT {
         --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg --para_diff $params.para_diff --perp_diff $params.perp_diff --iso_diff $params.iso_diff
     cp ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
     """
+}
+
+if (!params.run_commit) {
+    tracking_for_skip
+        .set{tracking_for_decompose}
+}
+
+tracking_for_decompose
+    .join(labels_for_decompose)
+    .set{tracking_labels_for_decompose}
+
+process Decompose_Connectivity {
+    cpus 1
+
+    input:
+    set sid, file(tracking), file(labels) from tracking_labels_for_decompose
+
+    output:
+    set sid, "${sid}__decompose.h5" into h5_for_afd_rd, h5_for_skip
+
+    script:
+    """
+    scil_decompose_connectivity.py $tracking $labels ${sid}__decompose.h5
+    """
+}
+
+h5_for_afd_rd
+    .join(fodf_for_afd_rd)
+    .set{h5_fodf_for_afd_rd}
+
+process Compute_AFD_RD {
+    cpus params.processes_afd_rd
+
+    input:
+    set sid, file(h5), file(fodf) from h5_fodf_for_afd_rd
+
+    output:
+    set sid, "${sid}__decompose_afd_rd.h5" into h5_for_transformation
+
+    when:
+    params.run_afd_rd
+
+    script:
+    """
+    length_weighting_arg=""
+    if $params.length_weighting; then
+        length_weighting_arg="--length_weighting"
+    fi
+    scil_compute_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.trk" \$length_weighting_arg --sh_basis $params.sh_basis --processes $params.processes_afd_rd
+    """
+}
+
+if (!params.run_afd_rd) {
+    h5_for_skip
+        .set{h5_for_transformation}
 }
 
 in_opt_metrics
@@ -181,44 +235,27 @@ process Transform_Metrics {
     """
 }
 
-tracking_for_transformation
-    .concat(tracking_for_skip)
+h5_for_transformation
     .join(labels_for_transformation)
     .join(transformation_for_data)
     .combine(template_for_transformation_data)
     .set{labels_tracking_transformation_for_data}
 process Transform_Data {
     input:
-    set sid, file(tracking), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
+    set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
 
     output:
-    set sid, "${sid}__tracking_warped.trk", "${sid}__labels_warped_int16.nii.gz" into tracking_labels_for_decompose
-    set sid, "${sid}__labels_warped_int16.nii.gz" into labels_for_compute
+    set sid, "${sid}__decompose_warped.h5", "${sid}__labels_warped_int16.nii.gz" into h5_labels_for_compute
+    file "${sid}__decompose_warped.h5" into h5_for_similarity
 
     script:
     """
-    scil_apply_transform_to_tractogram.py ${tracking} ${template} ${transfo} tracking_lin.trk --inverse --cut_invalid
-    scil_apply_warp_to_tractogram.py tracking_lin.trk ${template} ${inverse_warp} ${sid}__tracking_warped.trk --cut_invalid
+    scil_apply_transform_to_hdf5.py $h5 $template ${transfo} "${sid}__decompose_warped.h5" --inverse --in_deformation $inverse_warp --cut_invalid
     antsApplyTransforms -d 3 -i $labels -r $template -t $warp $transfo -n NearestNeighbor -o ${sid}__labels_warped.nii.gz
     scil_image_math.py convert ${sid}__labels_warped.nii.gz ${sid}__labels_warped_int16.nii.gz --data_type int16
     """
 }
 
-process Decompose_Connectivity {
-    cpus 1
-
-    input:
-    set sid, file(tracking), file(labels) from tracking_labels_for_decompose
-
-    output:
-    set sid, "${sid}__decompose.h5" into h5_for_compute
-    file "${sid}__decompose.h5" into h5_for_similarity
-
-    script:
-    """
-    scil_decompose_connectivity.py $tracking $labels ${sid}__decompose.h5
-    """
-}
 
 h5_for_similarity
     .collect()
@@ -240,11 +277,10 @@ process Average_Connections {
     """
 }
 
-h5_for_compute
-    .join(labels_for_compute)
+h5_labels_for_compute
     .join(metrics_for_compute)
     .combine(edges_for_similarity)
-    .combine(in_labels_list)
+    .combine(labels_list_for_compute)
     .set{h5_labels_compute}
 
 process Compute_Connectivity {
@@ -262,7 +298,7 @@ process Compute_Connectivity {
     for metric in $metrics; do
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
     done
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \${metrics_args} --density_weighting --no_self_connection --include_dps --processes $params.compute_connectivity
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \${metrics_args} --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """

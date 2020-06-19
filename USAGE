@@ -18,6 +18,7 @@ DESCRIPTION
                                                 │   │── dwi.bval (optional)
                                                 │   │── dwi.bvec (optional)
                                                 │   │── peaks.nii.gz (optional)
+                                                │   │── fodf.nii.gz (optional)
                                                 │   │── anat.nii.gz
                                                 |   └── metrics
                                                 |       └── *.nii.gz
@@ -37,8 +38,12 @@ OPTIONAL ARGUMENTS (current value)
     --perp_diff                                 Perpendicular diffusivity in mm^2/s ($perp_diff)
     --iso_diff                                  Istropic diffusivity in mm^2/s ($iso_diff)
 
+    --length_weighting                          If set, will weigh the AFD values according to segment lengths for afd/rd ($length_weighting)
+    --sh_basis                                  Spherical harmonics basis used for the SH coefficients  ($sh_basis)
+
     --register_processes                        Number of processes for registration task ($register_processes).
     --processes_commit                          Number of processes for COMMIT task ($register_processes).
+    --processes_afd_rd                          Number of processes for AFD/RD task ($processes_afd_rd).
     --processes_avg_similarity                  Number of processes for average similarity task ($register_processes).
     --compute_connectivity                      Number of processes for compute connectivity task ($register_processes).
 
