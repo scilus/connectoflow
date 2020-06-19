@@ -277,12 +277,15 @@ process Average_Connections {
     """
 }
 
+metrics_for_compute
+    .groupTuple()
+    .set{all_metrics_for_compute}
+
 h5_labels_for_compute
-    .join(metrics_for_compute)
+    .join(all_metrics_for_compute)
     .combine(edges_for_similarity)
     .combine(labels_list_for_compute)
     .set{h5_labels_compute}
-
 process Compute_Connectivity {
     cpus params.compute_connectivity
 
@@ -293,9 +296,10 @@ process Compute_Connectivity {
     set sid, "*.npy" into matrices_for_filtering
 
     script:
+    String metrics_list = metrics.join(", ").replace(',', '')
     """
     metrics_args=""
-    for metric in $metrics; do
+    for metric in $metrics_list; do
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
     done
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \${metrics_args} --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
