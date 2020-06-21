@@ -26,6 +26,7 @@ DESCRIPTION
                                                     └── *
 
     --template                                  Template used for registration in a common space for similarity/viz
+    --labels_list                               Complete (expected) labels_list of the atlas used
 
 OPTIONAL ARGUMENTS (current value)
     --tracking_ext                              Extension for the input tractogram ($tracking_ext)
@@ -38,6 +39,7 @@ OPTIONAL ARGUMENTS (current value)
     --perp_diff                                 Perpendicular diffusivity in mm^2/s ($perp_diff)
     --iso_diff                                  Istropic diffusivity in mm^2/s ($iso_diff)
 
+    --run_afd_rd                                Run the computation of AFD/RD on all pairs of connections ($run_afd_rd)
     --length_weighting                          If set, will weigh the AFD values according to segment lengths for afd/rd ($length_weighting)
     --sh_basis                                  Spherical harmonics basis used for the SH coefficients  ($sh_basis)
 

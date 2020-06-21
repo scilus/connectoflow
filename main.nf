@@ -64,7 +64,7 @@ in_data = Channel
 Channel.fromPath(file(params.template))
     .into{template_for_transformation;template_for_transformation_data;template_for_transformation_metrics}
 
-labels_list_for_compute = Channel.fromPath("$root/*labels_list.txt")
+labels_list_for_compute = Channel.fromPath(file(params.labels_list))
 
 fodf_for_afd_rd = Channel
     .fromFilePairs("$root/**/{*fodf.nii.gz,}",
