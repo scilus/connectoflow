@@ -1,7 +1,7 @@
-FreeSurfer pipeline
+Connectoflow pipeline
 ===================
 
-Run recon-all on all encountered subjects
+Run our state-of-the-art connectivity pipeline
 
 USAGE
 

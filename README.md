@@ -1,14 +1,11 @@
-# FreeSurfer pipeline
+# Connectoflow pipeline
 ===================
 
-Run the FreeSurfer recon-all pipeline.
+Run our state-of-the-art connectivity pipeline
 
 If you use this pipeline, please cite:
 
 ```
-Fischl, Bruce. "FreeSurfer." Neuroimage 62.2 (2012)
-https://dx.doi.org/10.1016%2Fj.neuroimage.2012.01.021
-
 Kurtzer GM, Sochat V, Bauer MW Singularity: Scientific containers for
 mobility of compute. PLoS ONE 12(5): e0177459 (2017)
 https://doi.org/10.1371/journal.pone.0177459
@@ -21,7 +18,7 @@ Requirements
 ------------
 
 - [Nextflow](https://www.nextflow.io)
-- FreeSurfer (https://surfer.nmr.mgh.harvard.edu/)
+- [scilpy](https://github.com/scilus/scilpy)
 
 Usage
 -----
