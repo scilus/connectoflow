@@ -12,14 +12,14 @@ DESCRIPTION
     --root=/path/to/[root]     Root folder containing multiple subjects
                                                 [root]
                                                 ├── S1
-                                                │   │── tracking.nii.gz
-                                                │   │── label.nii.gz
+                                                │   │── tracking.[fib,trk,tck]
+                                                │   │── labels.nii.gz
                                                 │   │── dwi.nii.gz (optional)
                                                 │   │── dwi.bval (optional)
                                                 │   │── dwi.bvec (optional)
                                                 │   │── peaks.nii.gz (optional)
                                                 │   │── fodf.nii.gz (optional)
-                                                │   │── anat.nii.gz
+                                                │   │── fa.nii.gz
                                                 |   └── metrics
                                                 |       └── *.nii.gz
                                                 └── S2
@@ -29,8 +29,6 @@ DESCRIPTION
     --labels_list                               Complete (expected) labels_list of the atlas used
 
 OPTIONAL ARGUMENTS (current value)
-    --tracking_ext                              Extension for the input tractogram ($tracking_ext)
-
     --run_commit                                Run COMMIT on the tractogram ($run_commit)
     --b_thr                                     Tolerance value to match b-value is on the same shell ($b_thr)
     --nbr_dir                                   Number of directions, (half sphere), representing the possible orientations of the response functions ($nbr_dir)

@@ -21,9 +21,9 @@ if(params.help) {
                 "compute_connectivity":"$params.compute_connectivity"]
 
     engine = new groovy.text.SimpleTemplateEngine()
-    a = engine.createTemplate(usage.text).make(bindings)
+    template = engine.createTemplate(usage.text).make(bindings)
 
-    print a.toString()
+    print template.toString()
     return
 }
 
@@ -54,23 +54,38 @@ log.info ""
 
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
-input_tracking = "tracking"+"$params.tracking_ext"
 in_data = Channel
-    .fromFilePairs("$root/**/{*anat.nii.gz,*labels.nii.gz,*$input_tracking}",
-                    size: 3,
+    .fromFilePairs("$root/**/{*fa.nii.gz,*labels.nii.gz}",
+                    size: 2,
+                    maxDepth:1,
+                    flat: true) {it.parent.name}
+
+in_trk = Channel
+    .fromFilePairs("$root/**/*tracking*.trk",
+                    size: -1,
+                    maxDepth:1) {it.parent.name}
+
+in_tck = Channel
+    .fromFilePairs("$root/**/*tracking*.tck",
+                    size: -1,
+                    maxDepth:1) {it.parent.name}
+
+in_fib = Channel
+    .fromFilePairs("$root/**/*tracking*.fib",
+                    size: -1,
+                    maxDepth:1) {it.parent.name}
+
+fodf_for_afd_rd = Channel
+    .fromFilePairs("$root/**/*fodf.nii.gz",
+                    size: 1,
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
 Channel.fromPath(file(params.template))
     .into{template_for_transformation;template_for_transformation_data;template_for_transformation_metrics}
 
-labels_list_for_compute = Channel.fromPath(file(params.labels_list))
-
-fodf_for_afd_rd = Channel
-    .fromFilePairs("$root/**/{*fodf.nii.gz,}",
-                    size: 1,
-                    maxDepth:1,
-                    flat: true) {it.parent.name}
+Channel.fromPath(file(params.labels_list))
+    .into{labels_list_for_compute;labels_list_for_visualize}
 
 in_opt_metrics = Channel
     .fromFilePairs("$root/**/metrics/*.nii.gz",
@@ -84,10 +99,10 @@ in_opt_data = Channel
                     flat: true) {it.parent.name}
 
 
-(anat_for_transformation, tracking_anat_for_ic, labels_for_transformation, labels_for_decompose) = in_data
-    .map{sid, anat, labels, tracking -> 
+(anat_for_transformation, anat_for_concatenate, labels_for_transformation, labels_for_decompose) = in_data
+    .map{sid, anat, labels ->
         [tuple(sid, anat),
-        tuple(sid, tracking, anat),
+        tuple(sid, anat),
         tuple(sid, labels),
         tuple(sid, labels)]}
     .separate(4)
@@ -97,23 +112,27 @@ in_opt_data = Channel
         [tuple(sid, bval, bvec, dwi, peaks)]}
     .separate(1)
 
-anat_for_transformation
-    .combine(template_for_transformation)
-    .set{anats_for_transformation}
-process Register_Anat {
-    cpus params.register_processes
+in_trk
+    .concat(in_tck)
+    .concat(in_fib)
+    .flatMap{ sid, tracking -> tracking.collect{ [sid, it] } }
+    .groupTuple(by: 0)
+    .combine(anat_for_concatenate, by: 0)
+    .set{tracking_anat_for_concatenate}
+process Concatenate_Tracking {
+    cpus 1
+
     input:
-    set sid, file(native_anat), file(template) from anats_for_transformation
+    set sid, file(trackings), file(ref) from tracking_anat_for_concatenate
 
     output:
-    set sid, "${sid}__output0GenericAffine.mat", "${sid}__output1Warp.nii.gz", "${sid}__output1InverseWarp.nii.gz"  into transformation_for_data, transformation_for_metrics
-    file "${sid}__outputWarped.nii.gz"
+    set sid, "${sid}__tracking_union.trk", "${ref}" into tracking_anat_for_ic
+
     script:
     """
-    antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.register_processes} -o ${sid}__output -t s
-    """ 
+    scil_streamlines_math.py concatenate $trackings "${sid}__tracking_union.trk" --ignore_invalid --reference $ref
+    """
 }
-
 
 process Remove_IC {
     cpus 1
@@ -156,7 +175,7 @@ process Run_COMMIT {
     scil_compute_streamlines_density_map.py $tracking tracking_mask.nii.gz --binary
     scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks --in_tracking_mask tracking_mask.nii.gz --processes $params.processes_commit \
         --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg --para_diff $params.para_diff --perp_diff $params.perp_diff --iso_diff $params.iso_diff
-    cp ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
+    mv ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
     """
 }
 
@@ -210,6 +229,23 @@ process Compute_AFD_RD {
     """
 }
 
+anat_for_transformation
+    .combine(template_for_transformation)
+    .set{anats_for_transformation}
+process Register_Anat {
+    cpus params.register_processes
+    input:
+    set sid, file(native_anat), file(template) from anats_for_transformation
+
+    output:
+    set sid, "${sid}__output0GenericAffine.mat", "${sid}__output1Warp.nii.gz", "${sid}__output1InverseWarp.nii.gz"  into transformation_for_data, transformation_for_metrics
+    file "${sid}__outputWarped.nii.gz"
+    script:
+    """
+    antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.register_processes} -o ${sid}__output -t s
+    """ 
+}
+
 in_opt_metrics
     .flatMap{ sid, metrics -> metrics.collect{ [sid, it] } }
     .combine(transformation_for_metrics, by: 0)
@@ -245,7 +281,7 @@ process Transform_Data {
     set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
 
     output:
-    set sid, "${sid}__decompose_warped.h5", "${sid}__labels_warped_int16.nii.gz" into h5_labels_for_compute
+    set sid, "${sid}__decompose_warped.h5", "${sid}__labels_warped_int16.nii.gz" into h5_labels_for_compute,lol
     file "${sid}__decompose_warped.h5" into h5_for_similarity
 
     script:
@@ -271,6 +307,9 @@ process Average_Connections {
     output:
     file "avg_per_edges/" into edges_for_similarity
 
+    when:
+    params.use_similarity_metric
+
     script:
     """
     scil_compute_hdf5_average_density_map.py $all_h5 avg_per_edges/ --binary --processes $params.processes_avg_similarity
@@ -281,19 +320,31 @@ metrics_for_compute
     .groupTuple()
     .set{all_metrics_for_compute}
 
-h5_labels_for_compute
-    .join(all_metrics_for_compute)
-    .combine(edges_for_similarity)
-    .combine(labels_list_for_compute)
-    .set{h5_labels_compute}
-process Compute_Connectivity {
+if (params.use_similarity_metric) {
+    h5_labels_for_compute
+        .join(all_metrics_for_compute)
+        .combine(edges_for_similarity)
+        .combine(labels_list_for_compute)
+        .set{h5_labels_similarity_list_for_compute}
+    h5_labels_list_for_compute = Channel.empty()
+}
+else {
+    h5_labels_for_compute
+        .join(all_metrics_for_compute)
+        .combine(labels_list_for_compute)
+        .set{h5_labels_list_for_compute}
+    h5_labels_similarity_list_for_compute = Channel.empty()
+}
+
+process Compute_Connectivity_with_similiarity {
     cpus params.compute_connectivity
+    publishDir = {"./results_conn/$sid/Compute_Connectivity"}
 
     input:
-    set sid, file(h5), file(labels), file(metrics), file(avg_edges), file(labels_list) from h5_labels_compute
+    set sid, file(h5), file(labels), file(metrics), file(avg_edges), file(labels_list) from h5_labels_similarity_list_for_compute
 
     output:
-    set sid, "*.npy" into matrices_for_filtering
+    set sid, "*.npy" into matrices_for_visualize_with_similarity
 
     script:
     String metrics_list = metrics.join(", ").replace(',', '')
@@ -302,8 +353,54 @@ process Compute_Connectivity {
     for metric in $metrics_list; do
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
     done
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \${metrics_args} --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
+
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
+    """
+}
+
+process Compute_Connectivity_without_similiarity {
+    cpus params.compute_connectivity
+    publishDir = {"./results_conn/$sid/Compute_Connectivity"}
+
+    input:
+    set sid, file(h5), file(labels), file(metrics), file(labels_list) from h5_labels_list_for_compute
+
+    output:
+    set sid, "*.npy" into matrices_for_visualize_without_similarity
+
+    script:
+    String metrics_list = metrics.join(", ").replace(',', '')
+    """
+    metrics_args=""
+    for metric in $metrics_list; do
+        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
+    done
+
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
+    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
+    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
+    """
+}
+
+matrices_for_visualize_with_similarity
+    .concat(matrices_for_visualize_without_similarity)
+    .combine(labels_list_for_visualize)
+    .set{matrices_labels_list_for_visualize}
+
+process Visualize_Connectivity {
+    input:
+    set sid, file(matrices), file(labels_list) from matrices_labels_list_for_visualize
+
+    output:
+    set sid, "*.png"
+
+    script:
+    String matrices_list = matrices.join(", ").replace(',', '')
+    """
+    for matrix in $matrices_list; do
+        scil_visualize_connectivity.py \$matrix \${matrix/.npy/_matrix.png} --labels_list $labels_list --name_axis --display_legend --histogram \${matrix/.npy/_hist.png} --nb_bins 50 --exclude_zeros --axis_text_size 5 5
+    done
     """
 }
