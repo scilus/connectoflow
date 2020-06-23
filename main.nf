@@ -55,23 +55,13 @@ log.info ""
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
 in_data = Channel
-    .fromFilePairs("$root/**/{*fa.nii.gz,*labels.nii.gz}",
+    .fromFilePairs("$root/**/{*fa.nii.gz,*labels.nii.gz,}",
                     size: 2,
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
-in_trk = Channel
-    .fromFilePairs("$root/**/*tracking*.trk",
-                    size: -1,
-                    maxDepth:1) {it.parent.name}
-
-in_tck = Channel
-    .fromFilePairs("$root/**/*tracking*.tck",
-                    size: -1,
-                    maxDepth:1) {it.parent.name}
-
-in_fib = Channel
-    .fromFilePairs("$root/**/*tracking*.fib",
+in_tracking = Channel
+    .fromFilePairs("$root/**/{*tracking*.*,}",
                     size: -1,
                     maxDepth:1) {it.parent.name}
 
@@ -112,25 +102,22 @@ in_opt_data = Channel
         [tuple(sid, bval, bvec, dwi, peaks)]}
     .separate(1)
 
-in_trk
-    .concat(in_tck)
-    .concat(in_fib)
-    .flatMap{ sid, tracking -> tracking.collect{ [sid, it] } }
-    .groupTuple(by: 0)
-    .combine(anat_for_concatenate, by: 0)
-    .set{tracking_anat_for_concatenate}
+in_tracking
+    .join(anat_for_concatenate)
+    .set{trackings_anat_for_concatenate}
+
 process Concatenate_Tracking {
     cpus 1
 
     input:
-    set sid, file(trackings), file(ref) from tracking_anat_for_concatenate
+    set sid, file(trackings), file(ref) from trackings_anat_for_concatenate
 
     output:
     set sid, "${sid}__tracking_union.trk", "${ref}" into tracking_anat_for_ic
 
     script:
     """
-    scil_streamlines_math.py concatenate $trackings "${sid}__tracking_union.trk" --ignore_invalid --reference $ref
+    scil_streamlines_math.py concatenate $trackings ${sid}__tracking_union.trk --ignore_invalid --reference $ref
     """
 }
 
