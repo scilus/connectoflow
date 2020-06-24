@@ -137,7 +137,8 @@ process Remove_IC {
 
     script:
     """
-    scil_remove_invalid_streamlines.py $tracking "${sid}__tracking_ic.trk" --cut --remove_single --remove_overlapping --reference $ref
+    scil_remove_invalid_streamlines.py $tracking "${sid}__tracking_ic.trk" --cut --remove_single --remove_overlapping
+        --reference $ref
     """
 }
 
@@ -168,8 +169,9 @@ process Run_COMMIT {
         perp_diff="--perp_diff $params.perp_diff"
     fi
     scil_compute_streamlines_density_map.py $tracking tracking_mask.nii.gz --binary
-    scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks --in_tracking_mask tracking_mask.nii.gz --processes $params.processes_commit \
-        --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff
+    scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks --in_tracking_mask tracking_mask.nii.gz
+        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg
+        --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff
     mv ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
     """
 }
@@ -220,7 +222,8 @@ process Compute_AFD_RD {
     if $params.length_weighting; then
         length_weighting_arg="--length_weighting"
     fi
-    scil_compute_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.h5" \$length_weighting_arg --sh_basis $params.sh_basis --processes $params.processes_afd_rd
+    scil_compute_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.h5" \$length_weighting_arg
+        --sh_basis $params.sh_basis --processes $params.processes_afd_rd
     """
 }
 
@@ -349,7 +352,9 @@ process Compute_Connectivity_with_similiarity {
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
     done
 
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy
+        --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection
+        --include_dps ./ --processes $params.compute_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
@@ -373,7 +378,9 @@ process Compute_Connectivity_without_similiarity {
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
     done
 
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy --length len.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ --processes $params.compute_connectivity
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy
+        --length len.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./
+        --processes $params.compute_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
@@ -395,7 +402,8 @@ process Visualize_Connectivity {
     String matrices_list = matrices.join(", ").replace(',', '')
     """
     for matrix in $matrices_list; do
-        scil_visualize_connectivity.py \$matrix \${matrix/.npy/_matrix.png} --labels_list $labels_list --name_axis --display_legend --histogram \${matrix/.npy/_hist.png} --nb_bins 50 --exclude_zeros --axis_text_size 5 5
+        scil_visualize_connectivity.py \$matrix \${matrix/.npy/_matrix.png} --labels_list $labels_list --name_axis
+            --display_legend --histogram \${matrix/.npy/_hist.png} --nb_bins 50 --exclude_zeros --axis_text_size 5 5
     done
     """
 }
