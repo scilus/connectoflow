@@ -161,12 +161,15 @@ process Run_COMMIT {
     script:
     """
     ball_stick_arg=""
+    perp_diff=""
     if $params.ball_stick; then
         ball_stick_arg="--ball_stick"
+    else
+        perp_diff="--perp_diff $params.perp_diff"
     fi
     scil_compute_streamlines_density_map.py $tracking tracking_mask.nii.gz --binary
     scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks --in_tracking_mask tracking_mask.nii.gz --processes $params.processes_commit \
-        --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg --para_diff $params.para_diff --perp_diff $params.perp_diff --iso_diff $params.iso_diff
+        --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff
     mv ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
     """
 }
