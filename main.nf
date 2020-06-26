@@ -98,12 +98,16 @@ in_opt_data = Channel
         tuple(sid, labels)]}
     .separate(5)
 
-(data_for_commit) = in_opt_data
+(data_for_kernels, data_for_commit) = in_opt_data
     .map{sid, bval, bvec, dwi, peaks -> 
-        [tuple(sid, bval, bvec, dwi, peaks)]}
-    .separate(1)
+        [tuple(sid, bval, bvec, dwi, peaks),
+        tuple(sid, bval, bvec, dwi, peaks)]}
+    .separate(2)
 
 in_tracking
+    .into{tracking_for_concatenate;tracking_for_kernel}
+
+tracking_for_concatenate
     .join(anat_for_concatenate)
     .set{trackings_anat_for_concatenate}
 
@@ -142,15 +146,53 @@ process Remove_IC {
     """
 }
 
+data_for_kernels
+    .join(tracking_for_kernel)
+    .first()
+    .set{data_tracking_for_kernel}
+
+process Compute_Kernel {
+    cpus 1
+    publishDir = {"./results_conn/$task.process"}
+
+    input:
+    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(trackings) from data_tracking_for_kernel
+
+    output:
+    file("kernels/") into kernel_for_commit
+
+    when:
+    params.run_commit
+
+    script:
+    """
+    ball_stick_arg=""
+    perp_diff=""
+    if $params.ball_stick; then
+        ball_stick_arg="--ball_stick"
+    else
+        perp_diff="--perp_diff $params.perp_diff"
+    fi
+
+    scil_streamlines_math.py concatenate $trackings tracking.trk --reference $dwi
+
+    scil_run_commit.py tracking.trk $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks \
+        --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
+        --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff \
+        --save_kernels kernels/ --compute_only
+    """
+}
+
 data_for_commit
     .join(tracking_for_commit)
-    .set{data_tracking_for_commit}
+    .combine(kernel_for_commit)
+    .set{data_tracking_kernel_for_commit}
 
 process Run_COMMIT {
     cpus params.processes_commit
 
     input:
-    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(tracking) from data_tracking_for_commit
+    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(tracking), file(kernels) from data_tracking_kernel_for_commit
 
     output:
     set sid, "${sid}__results_bzs/"
@@ -168,10 +210,9 @@ process Run_COMMIT {
     else
         perp_diff="--perp_diff $params.perp_diff"
     fi
-    scil_compute_streamlines_density_map.py $tracking tracking_mask.nii.gz --binary
-    scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks --in_tracking_mask tracking_mask.nii.gz \
+    scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks \
         --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
-        --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff
+        --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff --load_kernel $kernels
     mv ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
     """
 }
