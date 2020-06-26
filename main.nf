@@ -320,7 +320,7 @@ process Transform_Data {
     set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
 
     output:
-    set sid, "${sid}__decompose_warped.h5", "${sid}__labels_warped_int16.nii.gz" into h5_labels_for_compute,lol
+    set sid, "${sid}__decompose_warped.h5", "${sid}__labels_warped_int16.nii.gz" into h5_labels_for_compute
     file "${sid}__decompose_warped.h5" into h5_for_similarity
 
     script:
