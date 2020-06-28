@@ -117,12 +117,12 @@ process Concatenate_Tracking {
     set sid, file(trackings), file(ref) from trackings_anat_for_concatenate
 
     output:
-    set sid, "${sid}__tracking_union_ic.trk" into tracking_for_commit, tracking_for_skip
+    set sid, "${sid}__tracking_concat_ic.trk" into tracking_for_commit, tracking_for_skip
 
     script:
     """
-    scil_streamlines_math.py concatenate $trackings tracking_union.trk --ignore_invalid --reference $ref
-    scil_remove_invalid_streamlines.py tracking_union.trk "${sid}__tracking_union_ic.trk" --cut --remove_single --remove_overlapping \
+    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --ignore_invalid --reference $ref
+    scil_remove_invalid_streamlines.py tracking_concat.trk "${sid}__tracking_concat_ic.trk" --cut --remove_single --remove_overlapping \
         --reference $ref
     """
 }
@@ -155,7 +155,7 @@ process Compute_Kernel {
         perp_diff="--perp_diff $params.perp_diff"
     fi
 
-    scil_streamlines_math.py concatenate $trackings tracking.trk --reference $dwi
+    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $dwi
 
     scil_run_commit.py tracking.trk $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks \
         --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
