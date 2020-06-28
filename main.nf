@@ -89,14 +89,13 @@ in_opt_data = Channel
                     flat: true) {it.parent.name}
 
 
-(anat_for_transformation, anat_for_concatenate, anat_for_ic, labels_for_transformation, labels_for_decompose) = in_data
+(anat_for_transformation, anat_for_concatenate, labels_for_transformation, labels_for_decompose) = in_data
     .map{sid, anat, labels ->
         [tuple(sid, anat),
         tuple(sid, anat),
-        tuple(sid, anat),
         tuple(sid, labels),
         tuple(sid, labels)]}
-    .separate(5)
+    .separate(4)
 
 (data_for_kernels, data_for_commit) = in_opt_data
     .map{sid, bval, bvec, dwi, peaks -> 
@@ -118,30 +117,12 @@ process Concatenate_Tracking {
     set sid, file(trackings), file(ref) from trackings_anat_for_concatenate
 
     output:
-    set sid, "${sid}__tracking_union.trk" into tracking_for_ic
+    set sid, "${sid}__tracking_union_ic.trk" into tracking_for_commit, tracking_for_skip
 
     script:
     """
-    scil_streamlines_math.py concatenate $trackings ${sid}__tracking_union.trk --ignore_invalid --reference $ref
-    """
-}
-
-tracking_for_ic
-    .join(anat_for_ic)
-    .set{tracking_anat_for_ic}
-
-process Remove_IC {
-    cpus 1
-
-    input:
-    set sid, file(tracking), file(ref) from tracking_anat_for_ic
-
-    output:
-    set sid, "${sid}__tracking_ic.trk" into tracking_for_commit, tracking_for_skip
-
-    script:
-    """
-    scil_remove_invalid_streamlines.py $tracking "${sid}__tracking_ic.trk" --cut --remove_single --remove_overlapping \
+    scil_streamlines_math.py concatenate $trackings tracking_union.trk --ignore_invalid --reference $ref
+    scil_remove_invalid_streamlines.py tracking_union.trk "${sid}__tracking_union_ic.trk" --cut --remove_single --remove_overlapping \
         --reference $ref
     """
 }
