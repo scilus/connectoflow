@@ -11,6 +11,13 @@ if(params.help) {
                 "para_diff":"$params.para_diff",
                 "perp_diff":"$params.perp_diff",
                 "iso_diff":"$params.iso_diff",
+                "no_pruning":"$params.no_pruning",
+                "no_remove_loops":"$params.no_remove_loops",
+                "no_remove_outliers":"$params.no_remove_outliers",
+                "min_length":"$params.min_length",
+                "max_length":"$params.max_length",
+                "loop_max_angle":"$params.loop_max_angle",
+                "outlier_threshold":"$params.outlier_threshold",
                 "length_weighting":"$params.length_weighting",
                 "sh_basis":"$params.sh_basis",
                 "run_afd_rd":"$params.run_afd_rd",
@@ -59,6 +66,13 @@ log.info "Ball & Stick: $params.ball_stick"
 log.info "Parallel diffusion: $params.para_diff"
 log.info "Perpendicular diffusion: $params.perp_diff"
 log.info "Isotropic diffusion: $params.iso_diff"
+log.info "NO pruning: $params.no_pruning"
+log.info "NO loops removal: $params.no_remove_loops"
+log.info "NO remove outliers: $params.no_remove_outliers"
+log.info "Minimal length: $params.min_length"
+log.info "Maximal length: $params.max_length"
+log.info "Angle loops removal: $params.loop_max_angle"
+log.info "Outliers removal threshold: $params.outlier_threshold"
 log.info "Run AFD & RD: $params.run_afd_rd"
 log.info "Length weighting: $params.length_weighting"
 log.info "SH basis: $params.sh_basis"
@@ -240,7 +254,22 @@ process Decompose_Connectivity {
 
     script:
     """
-    scil_decompose_connectivity.py $tracking $labels ${sid}__decompose.h5
+    no_pruning_arg=""
+    if $params.no_pruning; then
+        no_pruning_arg="--no_pruning"
+    fi
+    no_remove_loops_arg=""
+    if $params.no_remove_loops; then
+        no_remove_loops_arg="--no_remove_loops"
+    fi
+    no_remove_outliers_arg=""
+    if $params.no_remove_outliers; then
+        no_remove_outliers_arg="--no_remove_outliers"
+    fi
+    scil_decompose_connectivity.py $tracking $labels ${sid}__decompose.h5 --no_remove_curv_dev \
+        \$no_pruning_arg \$no_remove_loops_arg \$no_remove_outliers_arg --min_length $params.min_length \
+        --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
+        --outlier_threshold $params.outlier_threshold
     """
 }
 
