@@ -4,21 +4,22 @@ if(params.help) {
     usage = file("$baseDir/USAGE")
     cpu_count = Runtime.runtime.availableProcessors()
 
-    bindings = ["tracking_ext":"$params.tracking_ext",
-                "length_weighting":"$params.length_weighting",
-                "sh_basis":"$params.sh_basis",
-                "run_commit":"$params.run_commit",
+    bindings = ["run_commit":"$params.run_commit",
                 "b_thr":"$params.b_thr",
                 "nbr_dir":"$params.nbr_dir",
                 "ball_stick":"$params.ball_stick",
                 "para_diff":"$params.para_diff",
                 "perp_diff":"$params.perp_diff",
                 "iso_diff":"$params.iso_diff",
-                "register_processes":"$params.register_processes",
+                "length_weighting":"$params.length_weighting",
+                "sh_basis":"$params.sh_basis",
+                "run_afd_rd":"$params.run_afd_rd",
+                "use_similarity_metric":"$params.use_similarity_metric",
+                "processes_register":"$params.processes_register",
                 "processes_commit":"$params.processes_commit",
                 "processes_afd_rd":"$params.processes_afd_rd",
                 "processes_avg_similarity":"$params.processes_avg_similarity",
-                "compute_connectivity":"$params.compute_connectivity"]
+                "processes_connectivity":"$params.processes_connectivity"]
 
     engine = new groovy.text.SimpleTemplateEngine()
     template = engine.createTemplate(usage.text).make(bindings)
@@ -45,11 +46,32 @@ log.info ""
 
 log.info "[Inputs]"
 log.info "Root: $params.root"
+log.info "Tempalte: $params.template"
+log.info "Labels list: $params.labels_list"
 log.info ""
 
 log.info "Options"
 log.info "======="
+log.info "Run COMMIT: $params.run_commit"
+log.info "bval tolerance: $params.b_thr"
+log.info "Nbr directions: $params.nbr_dir"
+log.info "Ball & Stick: $params.ball_stick"
+log.info "Parallel diffusion: $params.para_diff"
+log.info "Perpendicular diffusion: $params.perp_diff"
+log.info "Isotropic diffusion: $params.iso_diff"
+log.info "Run AFD & RD: $params.run_afd_rd"
+log.info "Length weighting: $params.length_weighting"
+log.info "SH basis: $params.sh_basis"
+log.info "Use similarity metric: $params.use_similarity_metric"
 log.info ""
+
+log.info "Number of processes per tasks"
+log.info "============================="
+log.info "Template registration: $params.processes_register"
+log.info "COMMIT: $params.processes_commit"
+log.info "AFD & RD computation: $params.processes_afd_rd"
+log.info "Average / Similarity: $params.processes_avg_similarity"
+log.info "Compute Connectivity: $params.processes_connectivity"
 log.info ""
 
 root = file(params.root)
@@ -253,7 +275,7 @@ anat_for_transformation
     .combine(template_for_transformation)
     .set{anats_for_transformation}
 process Register_Anat {
-    cpus params.register_processes
+    cpus params.processes_register
     input:
     set sid, file(native_anat), file(template) from anats_for_transformation
 
@@ -262,7 +284,7 @@ process Register_Anat {
     file "${sid}__outputWarped.nii.gz"
     script:
     """
-    antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.register_processes} -o ${sid}__output -t s
+    antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.processes_register} -o ${sid}__output -t s
     """ 
 }
 
@@ -297,6 +319,8 @@ h5_for_transformation
     .combine(template_for_transformation_data)
     .set{labels_tracking_transformation_for_data}
 process Transform_Data {
+    cpus 1
+
     input:
     set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
 
@@ -357,7 +381,7 @@ else {
 }
 
 process Compute_Connectivity_with_similiarity {
-    cpus params.compute_connectivity
+    cpus params.processes_connectivity
     publishDir = {"./results_conn/$sid/Compute_Connectivity"}
 
     input:
@@ -376,14 +400,14 @@ process Compute_Connectivity_with_similiarity {
 
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
         --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection \
-        --include_dps ./ --processes $params.compute_connectivity
+        --include_dps ./ --processes $params.processes_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
 }
 
 process Compute_Connectivity_without_similiarity {
-    cpus params.compute_connectivity
+    cpus params.processes_connectivity
     publishDir = {"./results_conn/$sid/Compute_Connectivity"}
 
     input:
@@ -402,7 +426,7 @@ process Compute_Connectivity_without_similiarity {
 
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
         --length len.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ \
-        --processes $params.compute_connectivity
+        --processes $params.processes_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
@@ -414,6 +438,8 @@ matrices_for_visualize_with_similarity
     .set{matrices_labels_list_for_visualize}
 
 process Visualize_Connectivity {
+    cpus 1
+
     input:
     set sid, file(matrices), file(labels_list) from matrices_labels_list_for_visualize
 

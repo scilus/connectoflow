@@ -41,11 +41,13 @@ OPTIONAL ARGUMENTS (current value)
     --length_weighting                          If set, will weigh the AFD values according to segment lengths for afd/rd ($length_weighting)
     --sh_basis                                  Spherical harmonics basis used for the SH coefficients  ($sh_basis)
 
-    --register_processes                        Number of processes for registration task ($register_processes).
-    --processes_commit                          Number of processes for COMMIT task ($register_processes).
-    --processes_afd_rd                          Number of processes for AFD/RD task ($processes_afd_rd).
-    --processes_avg_similarity                  Number of processes for average similarity task ($register_processes).
-    --compute_connectivity                      Number of processes for compute connectivity task ($register_processes).
+    --use_similarity_metric                     Compute the average shape distance for each connection ($use_similarity_metric)
+
+    --processes_register                        Number of processes for registration task ($processes_register)
+    --processes_commit                          Number of processes for COMMIT task ($processes_commit)
+    --processes_afd_rd                          Number of processes for AFD/RD task ($processes_afd_rd)
+    --processes_avg_similarity                  Number of processes for average similarity task ($processes_avg_similarity)
+    --processes_connectivity                    Number of processes for compute connectivity task ($processes_connectivity) 
 
 NOTES
 
