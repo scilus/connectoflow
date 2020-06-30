@@ -50,6 +50,7 @@ OPTIONAL ARGUMENTS (current value)
     --sh_basis                                  Spherical harmonics basis used for the SH coefficients  ($sh_basis)
 
     --use_similarity_metric                     Compute the average shape distance for each connection ($use_similarity_metric)
+    --nbr_of_samples                             The average shape is computed from a random subset of subjects ($nbr_of_sample)
 
     --processes_register                        Number of processes for registration task ($processes_register)
     --processes_commit                          Number of processes for COMMIT task ($processes_commit)
