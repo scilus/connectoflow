@@ -22,6 +22,7 @@ if(params.help) {
                 "sh_basis":"$params.sh_basis",
                 "run_afd_rd":"$params.run_afd_rd",
                 "use_similarity_metric":"$params.use_similarity_metric",
+                "nbr_of_samples":"$params.nbr_of_samples",
                 "processes_register":"$params.processes_register",
                 "processes_commit":"$params.processes_commit",
                 "processes_afd_rd":"$params.processes_afd_rd",
@@ -91,8 +92,8 @@ log.info ""
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
 in_data = Channel
-    .fromFilePairs("$root/**/{*fa.nii.gz,*labels.nii.gz,}",
-                    size: 2,
+    .fromFilePairs("$root/**/{*labels.nii.gz,*t1.nii.gz,*0GenericAffine.mat,*1Warp.nii.gz}",
+                    size: 4,
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
@@ -108,7 +109,7 @@ fodf_for_afd_rd = Channel
                     flat: true) {it.parent.name}
 
 Channel.fromPath(file(params.template))
-    .into{template_for_transformation;template_for_transformation_data;template_for_transformation_metrics}
+    .into{template_for_registration;template_for_transformation_data;template_for_transformation_metrics}
 
 Channel.fromPath(file(params.labels_list))
     .into{labels_list_for_compute;labels_list_for_visualize}
@@ -124,20 +125,34 @@ in_opt_data = Channel
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
-
-(anat_for_transformation, anat_for_concatenate, labels_for_transformation, labels_for_decompose) = in_data
-    .map{sid, anat, labels ->
-        [tuple(sid, anat),
-        tuple(sid, anat),
-        tuple(sid, labels),
-        tuple(sid, labels)]}
-    .separate(4)
+(anat_for_transformation) = in_data
+    .map{sid, labels, anat, mat, warp ->
+        [tuple(sid, labels, anat, mat, warp)]}
+    .separate(1)
 
 (data_for_kernels, data_for_commit) = in_opt_data
     .map{sid, bval, bvec, dwi, peaks -> 
         [tuple(sid, bval, bvec, dwi, peaks),
         tuple(sid, bval, bvec, dwi, peaks)]}
     .separate(2)
+
+process Transform_T1_Labels {
+    cpus 2
+
+    input:
+    set sid, file(labels), file(anat), file(mat), file(warp) from anat_for_transformation
+
+    output:
+    set sid, "${sid}__labels_warped_int16.nii.gz" into labels_for_transformation, labels_for_decompose
+    set sid, "${sid}__t1_warped.nii.gz" into anat_for_registration, anat_for_concatenate, anat_for_metrics
+
+    script:
+    """
+    antsApplyTransforms -d 3 -i $anat -r $warp -o ${sid}__t1_warped.nii.gz -t $warp $mat -n Linear
+    antsApplyTransforms -d 3 -i $labels -r $warp -o labels_warped.nii.gz -t $warp $mat -n NearestNeighbor
+    scil_image_math.py convert labels_warped.nii.gz "${sid}__labels_warped_int16.nii.gz" --data_type int16
+    """
+}
 
 in_tracking
     .into{tracking_for_concatenate;tracking_for_kernel}
@@ -300,13 +315,13 @@ process Compute_AFD_RD {
     """
 }
 
-anat_for_transformation
-    .combine(template_for_transformation)
-    .set{anats_for_transformation}
+anat_for_registration
+    .combine(template_for_registration)
+    .set{anats_for_registration}
 process Register_Anat {
     cpus params.processes_register
     input:
-    set sid, file(native_anat), file(template) from anats_for_transformation
+    set sid, file(native_anat), file(template) from anats_for_registration
 
     output:
     set sid, "${sid}__output0GenericAffine.mat", "${sid}__output1Warp.nii.gz", "${sid}__output1InverseWarp.nii.gz"  into transformation_for_data, transformation_for_metrics
@@ -318,6 +333,9 @@ process Register_Anat {
 }
 
 in_opt_metrics
+    .transpose()
+    .concat(anat_for_metrics)
+    .groupTuple()
     .flatMap{ sid, metrics -> metrics.collect{ [sid, it] } }
     .combine(transformation_for_metrics, by: 0)
     .combine(template_for_transformation_metrics)
@@ -341,7 +359,6 @@ if (!params.run_afd_rd) {
     h5_for_skip
         .set{h5_for_transformation}
 }
-
 h5_for_transformation
     .join(labels_for_transformation)
     .join(transformation_for_data)
@@ -354,14 +371,14 @@ process Transform_Data {
     set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
 
     output:
-    set sid, "${sid}__decompose_warped.h5", "${sid}__labels_warped_int16.nii.gz" into h5_labels_for_compute
-    file "${sid}__decompose_warped.h5" into h5_for_similarity
+    set sid, "${sid}__decompose_warped_mni.h5", "${sid}__labels_warped_mni_int16.nii.gz" into h5_labels_for_compute
+    file "${sid}__decompose_warped_mni.h5" into h5_for_similarity
 
     script:
     """
-    scil_apply_transform_to_hdf5.py $h5 $template ${transfo} "${sid}__decompose_warped.h5" --inverse --in_deformation $inverse_warp --cut_invalid
-    antsApplyTransforms -d 3 -i $labels -r $template -t $warp $transfo -n NearestNeighbor -o ${sid}__labels_warped.nii.gz
-    scil_image_math.py convert ${sid}__labels_warped.nii.gz ${sid}__labels_warped_int16.nii.gz --data_type int16
+    scil_apply_transform_to_hdf5.py $h5 $template ${transfo} "${sid}__decompose_warped_mni.h5" --inverse --in_deformation $inverse_warp --cut_invalid
+    antsApplyTransforms -d 3 -i $labels -r $template -t $warp $transfo -n NearestNeighbor -o labels_warped_mni.nii.gz
+    scil_image_math.py convert labels_warped_mni.nii.gz ${sid}__labels_warped_mni_int16.nii.gz --data_type int16
     """
 }
 
@@ -425,7 +442,9 @@ process Compute_Connectivity_with_similiarity {
     """
     metrics_args=""
     for metric in $metrics_list; do
-        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
+        base_name=\$(basename \${metric/_warped_mni/}
+        base_name=\${base_name/"${sid}"__/}
+        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped_mni/} .nii.gz).npy"
     done
 
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
@@ -451,7 +470,7 @@ process Compute_Connectivity_without_similiarity {
     """
     metrics_args=""
     for metric in $metrics_list; do
-        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped/} .nii.gz).npy" 
+        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped_mni/} .nii.gz).npy"
     done
 
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \

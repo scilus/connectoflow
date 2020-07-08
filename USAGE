@@ -1,7 +1,13 @@
 Connectoflow pipeline
 ===================
 
-Run our state-of-the-art connectivity pipeline
+Run our state-of-the-art connectivity pipeline.
+T1 and labels must be provided in their original space (output from freesurfer
+or civet) and the affine and nonlinear transformation must bring these images
+to diffusion.
+
+The rest of the input (tracking, dwi, peaks, fodf and all metrics)
+must be in diffusion space with compatible headers.
 
 USAGE
 
@@ -12,14 +18,16 @@ DESCRIPTION
     --root=/path/to/[root]     Root folder containing multiple subjects
                                                 [root]
                                                 ├── S1
-                                                │   │── tracking.[fib,trk,tck]
-                                                │   │── labels.nii.gz
-                                                │   │── dwi.nii.gz (optional)
-                                                │   │── dwi.bval (optional)
-                                                │   │── dwi.bvec (optional)
-                                                │   │── peaks.nii.gz (optional)
-                                                │   │── fodf.nii.gz (optional)
-                                                │   │── fa.nii.gz
+                                                │   │── *tracking*.[fib,trk,tck]
+                                                │   │── *labels.nii.gz
+                                                │   │── *t1.nii.gz
+                                                │   │── *1Warp.nii.gz
+                                                │   │── *0GenericAffine.mat
+                                                │   │── *dwi.nii.gz (optional)
+                                                │   │── *dwi.bval (optional)
+                                                │   │── *dwi.bvec (optional)
+                                                │   │── *peaks.nii.gz (optional)
+                                                │   │── *fodf.nii.gz (optional)
                                                 |   └── metrics
                                                 |       └── *.nii.gz
                                                 └── S2
@@ -50,7 +58,7 @@ OPTIONAL ARGUMENTS (current value)
     --sh_basis                                  Spherical harmonics basis used for the SH coefficients  ($sh_basis)
 
     --use_similarity_metric                     Compute the average shape distance for each connection ($use_similarity_metric)
-    --nbr_of_samples                             The average shape is computed from a random subset of subjects ($nbr_of_sample)
+    --nbr_of_samples                             The average shape is computed from a random subset of subjects ($nbr_of_samples)
 
     --processes_register                        Number of processes for registration task ($processes_register)
     --processes_commit                          Number of processes for COMMIT task ($processes_commit)
