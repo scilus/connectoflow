@@ -371,14 +371,14 @@ process Transform_Data {
     set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
 
     output:
-    set sid, "${sid}__decompose_warped_mni.h5", "${sid}__labels_warped_mni_int16.nii.gz" into h5_labels_for_compute
-    file "${sid}__decompose_warped_mni.h5" into h5_for_similarity
+    set sid, "${sid}__decompose_mni.h5", "${sid}__labels_mni_int16.nii.gz" into h5_labels_for_compute
+    file "${sid}__decompose_mni.h5" into h5_for_similarity
 
     script:
     """
-    scil_apply_transform_to_hdf5.py $h5 $template ${transfo} "${sid}__decompose_warped_mni.h5" --inverse --in_deformation $inverse_warp --cut_invalid
-    antsApplyTransforms -d 3 -i $labels -r $template -t $warp $transfo -n NearestNeighbor -o labels_warped_mni.nii.gz
-    scil_image_math.py convert labels_warped_mni.nii.gz ${sid}__labels_warped_mni_int16.nii.gz --data_type int16
+    scil_apply_transform_to_hdf5.py $h5 $template ${transfo} "${sid}__decompose_mni.h5" --inverse --in_deformation $inverse_warp --cut_invalid
+    antsApplyTransforms -d 3 -i $labels -r $template -t $warp $transfo -n NearestNeighbor -o labels_mni.nii.gz
+    scil_image_math.py convert labels_mni.nii.gz ${sid}__labels_mni_int16.nii.gz --data_type int16
     """
 }
 
@@ -442,9 +442,9 @@ process Compute_Connectivity_with_similiarity {
     """
     metrics_args=""
     for metric in $metrics_list; do
-        base_name=\$(basename \${metric/_warped_mni/}
+        base_name=\$(basename \${metric/_mni/}
         base_name=\${base_name/"${sid}"__/}
-        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped_mni/} .nii.gz).npy"
+        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_mni/} .nii.gz).npy"
     done
 
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
@@ -470,7 +470,7 @@ process Compute_Connectivity_without_similiarity {
     """
     metrics_args=""
     for metric in $metrics_list; do
-        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_warped_mni/} .nii.gz).npy"
+        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \${metric/_mni/} .nii.gz).npy"
     done
 
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \

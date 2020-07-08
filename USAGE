@@ -28,7 +28,7 @@ DESCRIPTION
                                                 │   │── *dwi.bvec (optional)
                                                 │   │── *peaks.nii.gz (optional)
                                                 │   │── *fodf.nii.gz (optional)
-                                                |   └── metrics
+                                                |   └── metrics (optional)
                                                 |       └── *.nii.gz
                                                 └── S2
                                                     └── *
