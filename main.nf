@@ -147,7 +147,7 @@ tracking_for_concatenate
     .set{trackings_anat_for_concatenate}
 
 process Concatenate_Tracking {
-    cpus 1
+    cpus 2
 
     input:
     set sid, file(trackings), file(ref) from trackings_anat_for_concatenate
@@ -193,7 +193,7 @@ process Compute_Kernel {
 
     scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $dwi
 
-    scil_run_commit.py tracking.trk $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks \
+    scil_run_commit.py tracking_concat.trk $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks \
         --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
         --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff \
         --save_kernels kernels/ --compute_only
