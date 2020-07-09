@@ -4,10 +4,21 @@ Connectoflow pipeline
 Run our state-of-the-art connectivity pipeline.
 T1 and labels must be provided in their original space (output from freesurfer
 or civet) and the affine and nonlinear transformation must bring these images
-to diffusion.
+to diffusion space.
 
 The rest of the input (tracking, dwi, peaks, fodf and all metrics)
 must be in diffusion space with compatible headers.
+
+It is mandatory that all grouped input either have identical prefix or no
+prefix at all.
+For example, *labels.nii.gz and *t1.nii.gz should either be named:
+labels.nii.gz, t1.nii.gz OR SUBJID_labels.nii.gz, SUBJID_t1.nii.gz.
+
+*dwi.nii.gz, *dwi.bval, *dwi.bvec, *fodf.nii.gz, *peaks.nii.gz must also have
+the same suffixes in order to be read properly.
+
+The file *tracking*.[fib,trk,tck] must also follow this convention, but can
+have any suffixes.
 
 USAGE
 
@@ -29,7 +40,7 @@ DESCRIPTION
                                                 │   │── *peaks.nii.gz (optional)
                                                 │   │── *fodf.nii.gz (optional)
                                                 |   └── metrics (optional)
-                                                |       └── *.nii.gz
+                                                |       └── METRIC_NAME.nii.gz
                                                 └── S2
                                                     └── *
 

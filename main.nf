@@ -91,9 +91,15 @@ log.info ""
 
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
-in_data = Channel
-    .fromFilePairs("$root/**/{*labels.nii.gz,*t1.nii.gz,*0GenericAffine.mat,*1Warp.nii.gz}",
-                    size: 4,
+in_t1_labels = Channel
+    .fromFilePairs("$root/**/{*labels.nii.gz,*t1.nii.gz}",
+                    size: 2,
+                    maxDepth:1,
+                    flat: true) {it.parent.name}
+
+in_transfo = Channel
+    .fromFilePairs("$root/**/{output0GenericAffine.mat,output1Warp.nii.gz}",
+                    size: 2,
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
@@ -119,25 +125,24 @@ in_opt_metrics = Channel
                     size: -1,
                     maxDepth:2) {it.parent.parent.name}
 
-in_opt_data = Channel
+in_dwi_data = Channel
     .fromFilePairs("$root/**/{*dwi.bval,*dwi.bvec,*dwi.nii.gz,*peaks.nii.gz}",
                     size: 4,
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
-(anat_for_transformation) = in_data
-    .map{sid, labels, anat, mat, warp ->
-        [tuple(sid, labels, anat, mat, warp)]}
-    .separate(1)
-
-(data_for_kernels, data_for_commit) = in_opt_data
+(data_for_kernels, data_for_commit) = in_dwi_data
     .map{sid, bval, bvec, dwi, peaks -> 
         [tuple(sid, bval, bvec, dwi, peaks),
         tuple(sid, bval, bvec, dwi, peaks)]}
     .separate(2)
 
+
+in_t1_labels
+    .join(in_transfo)
+    .set{anat_for_transformation}
 process Transform_T1_Labels {
-    cpus 2
+    cpus 1
 
     input:
     set sid, file(labels), file(anat), file(mat), file(warp) from anat_for_transformation
