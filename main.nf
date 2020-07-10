@@ -153,7 +153,7 @@ process Transform_T1_Labels {
 
     script:
     """
-    antsApplyTransforms -d 3 -i $anat -r $warp -o ${sid}__t1_warped.nii.gz -t $warp $mat -n Linear
+    antsApplyTransforms -d 3 -i $anat -r $warp -o "${sid}__t1_warped.nii.gz" -t $warp $mat -n Linear
     antsApplyTransforms -d 3 -i $labels -r $warp -o labels_warped.nii.gz -t $warp $mat -n NearestNeighbor
     scil_image_math.py convert labels_warped.nii.gz "${sid}__labels_warped_int16.nii.gz" --data_type int16
     """
@@ -173,13 +173,47 @@ process Concatenate_Tracking {
     set sid, file(trackings), file(ref) from trackings_anat_for_concatenate
 
     output:
-    set sid, "${sid}__tracking_concat_ic.trk" into tracking_for_commit, tracking_for_skip
+    set sid, "${sid}__tracking_concat_ic.trk" into tracking_for_decompose
 
     script:
     """
     scil_streamlines_math.py concatenate $trackings tracking_concat.trk --ignore_invalid --reference $ref
     scil_remove_invalid_streamlines.py tracking_concat.trk "${sid}__tracking_concat_ic.trk" --cut --remove_single --remove_overlapping \
         --reference $ref
+    """
+}
+
+tracking_for_decompose
+    .join(labels_for_decompose)
+    .set{tracking_labels_for_decompose}
+
+process Decompose_Connectivity {
+    cpus 1
+
+    input:
+    set sid, file(tracking), file(labels) from tracking_labels_for_decompose
+
+    output:
+    set sid, "${sid}__decompose.h5" into h5_for_commit, h5_for_skip_commit
+
+    script:
+    """
+    no_pruning_arg=""
+    if $params.no_pruning; then
+        no_pruning_arg="--no_pruning"
+    fi
+    no_remove_loops_arg=""
+    if $params.no_remove_loops; then
+        no_remove_loops_arg="--no_remove_loops"
+    fi
+    no_remove_outliers_arg=""
+    if $params.no_remove_outliers; then
+        no_remove_outliers_arg="--no_remove_outliers"
+    fi
+    scil_decompose_connectivity.py $tracking $labels "${sid}__decompose.h5" --no_remove_curv_dev \
+        \$no_pruning_arg \$no_remove_loops_arg \$no_remove_outliers_arg --min_length $params.min_length \
+        --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
+        --outlier_threshold $params.outlier_threshold
     """
 }
 
@@ -213,7 +247,7 @@ process Compute_Kernel {
 
     scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $dwi
 
-    scil_run_commit.py tracking_concat.trk $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks \
+    scil_run_commit.py tracking_concat.trk $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
         --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff \
         --save_kernels kernels/ --compute_only
@@ -221,7 +255,7 @@ process Compute_Kernel {
 }
 
 data_for_commit
-    .join(tracking_for_commit)
+    .join(h5_for_commit)
     .combine(kernel_for_commit)
     .set{data_tracking_kernel_for_commit}
 
@@ -229,11 +263,11 @@ process Run_COMMIT {
     cpus params.processes_commit
 
     input:
-    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(tracking), file(kernels) from data_tracking_kernel_for_commit
+    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(h5), file(kernels) from data_tracking_kernel_for_commit
 
     output:
     set sid, "${sid}__results_bzs/"
-    set sid, "${sid}__essential_tractogram.trk" into tracking_for_decompose
+    set sid, "${sid}__decompose_commit.h5" into h5_for_afd_rd
 
     when:
     params.run_commit
@@ -247,50 +281,16 @@ process Run_COMMIT {
     else
         perp_diff="--perp_diff $params.perp_diff"
     fi
-    scil_run_commit.py $tracking $dwi $bval $bvec ${sid}__results_bzs/ --in_peaks $peaks \
+    scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
         --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff --load_kernel $kernels
-    mv ${sid}__results_bzs/essential_tractogram.trk ./"${sid}__essential_tractogram.trk"
+    mv "${sid}__results_bzs/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
 }
 
 if (!params.run_commit) {
-    tracking_for_skip
-        .set{tracking_for_decompose}
-}
-
-tracking_for_decompose
-    .join(labels_for_decompose)
-    .set{tracking_labels_for_decompose}
-
-process Decompose_Connectivity {
-    cpus 1
-
-    input:
-    set sid, file(tracking), file(labels) from tracking_labels_for_decompose
-
-    output:
-    set sid, "${sid}__decompose.h5" into h5_for_afd_rd, h5_for_skip
-
-    script:
-    """
-    no_pruning_arg=""
-    if $params.no_pruning; then
-        no_pruning_arg="--no_pruning"
-    fi
-    no_remove_loops_arg=""
-    if $params.no_remove_loops; then
-        no_remove_loops_arg="--no_remove_loops"
-    fi
-    no_remove_outliers_arg=""
-    if $params.no_remove_outliers; then
-        no_remove_outliers_arg="--no_remove_outliers"
-    fi
-    scil_decompose_connectivity.py $tracking $labels ${sid}__decompose.h5 --no_remove_curv_dev \
-        \$no_pruning_arg \$no_remove_loops_arg \$no_remove_outliers_arg --min_length $params.min_length \
-        --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
-        --outlier_threshold $params.outlier_threshold
-    """
+    h5_for_skip_commit
+        .into{h5_for_afd_rdl;h5_for_skip_aft_rd}
 }
 
 h5_for_afd_rd
@@ -333,7 +333,7 @@ process Register_Anat {
     file "${sid}__outputWarped.nii.gz"
     script:
     """
-    antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.processes_register} -o ${sid}__output -t s
+    antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.processes_register} -o "${sid}__output" -t s
     """ 
 }
 
@@ -361,7 +361,7 @@ process Transform_Metrics {
 }
 
 if (!params.run_afd_rd) {
-    h5_for_skip
+    h5_for_skip_aft_rd
         .set{h5_for_transformation}
 }
 h5_for_transformation
@@ -383,7 +383,7 @@ process Transform_Data {
     """
     scil_apply_transform_to_hdf5.py $h5 $template ${transfo} "${sid}__decompose_warped_mni.h5" --inverse --in_deformation $inverse_warp --cut_invalid
     antsApplyTransforms -d 3 -i $labels -r $template -t $warp $transfo -n NearestNeighbor -o labels_mni.nii.gz
-    scil_image_math.py convert labels_mni.nii.gz ${sid}__labels_warped_mni_int16.nii.gz --data_type int16
+    scil_image_math.py convert labels_mni.nii.gz "${sid}__labels_warped_mni_int16.nii.gz" --data_type int16
     """
 }
 
@@ -449,7 +449,7 @@ process Compute_Connectivity_with_similiarity {
     for metric in $metrics_list; do
         base_name=\$(basename \${metric/_mni/})
         base_name=\${base_name/_warped/}
-        base_name=\${base_name/${sid}__/}
+        base_name=\${base_name/"${sid}__"/}
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \$base_name .nii.gz).npy"
     done
 
@@ -478,7 +478,7 @@ process Compute_Connectivity_without_similiarity {
     for metric in $metrics_list; do
         base_name=\$(basename \${metric/_mni/})
         base_name=\${base_name/_warped/}
-        base_name=\${base_name/${sid}__/}
+        base_name=\${base_name/"${sid}__"/}
         metrics_args="\${metrics_args} --metrics \${metric} \$(basename \$base_name .nii.gz).npy"
     done
 
