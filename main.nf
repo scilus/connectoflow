@@ -178,8 +178,7 @@ process Concatenate_Tracking {
     script:
     """
     scil_streamlines_math.py concatenate $trackings tracking_concat.trk --ignore_invalid --reference $ref
-    scil_remove_invalid_streamlines.py tracking_concat.trk "${sid}__tracking_concat_ic.trk" --cut --remove_single --remove_overlapping \
-        --reference $ref
+    scil_remove_invalid_streamlines.py tracking_concat.trk "${sid}__tracking_concat_ic.trk" --remove_single --remove_overlapping
     """
 }
 
