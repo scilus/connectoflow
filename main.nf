@@ -178,7 +178,7 @@ process Concatenate_Tracking {
     script:
     """
     scil_streamlines_math.py concatenate $trackings tracking_concat.trk --ignore_invalid --reference $ref
-    scil_remove_invalid_streamlines.py tracking_concat.trk "${sid}__tracking_concat_ic.trk" --remove_single --remove_overlapping --cut
+    scil_remove_invalid_streamlines.py tracking_concat.trk "${sid}__tracking_concat_ic.trk" --remove_single --remove_overlapping
     """
 }
 
@@ -244,9 +244,10 @@ process Compute_Kernel {
         perp_diff="--perp_diff $params.perp_diff"
     fi
 
-    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $dwi
+    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $dwi --ignore_invalid
+    scil_remove_invalid_streamlines.py tracking_concat.trk tracking_concat_ic.trk --remove_single --remove_overlapping
 
-    scil_run_commit.py tracking_concat.trk $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
+    scil_run_commit.py tracking_concat_ic.trk $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
         --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff \
         --save_kernels kernels/ --compute_only
