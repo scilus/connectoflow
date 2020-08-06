@@ -187,7 +187,7 @@ tracking_for_decompose
     .set{tracking_labels_for_decompose}
 
 process Decompose_Connectivity {
-    cpus 1
+    cpus 2
 
     input:
     set sid, file(tracking), file(labels) from tracking_labels_for_decompose
