@@ -389,7 +389,7 @@ process Transform_Data {
 
 
 h5_for_similarity
-    .randomSample(params.nbr_of_samples)
+    .take(params.nbr_of_samples)
     .collect()
     .set{all_h5_for_similarity}
 
