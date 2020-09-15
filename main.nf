@@ -4,7 +4,8 @@ if(params.help) {
     usage = file("$baseDir/USAGE")
     cpu_count = Runtime.runtime.availableProcessors()
 
-    bindings = ["run_commit":"$params.run_commit",
+    bindings = ["output_dir":"$params.output_dir",
+                "run_commit":"$params.run_commit",
                 "b_thr":"$params.b_thr",
                 "nbr_dir":"$params.nbr_dir",
                 "ball_stick":"$params.ball_stick",
@@ -56,6 +57,8 @@ log.info "[Inputs]"
 log.info "Root: $params.root"
 log.info "Tempalte: $params.template"
 log.info "Labels list: $params.labels_list"
+log.info "Labels image prefix: $params.labels_img_prefix"
+log.info "Output directory: $params.output_dir"
 log.info ""
 
 log.info "Options"
@@ -92,13 +95,13 @@ log.info ""
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
 in_t1_labels = Channel
-    .fromFilePairs("$root/**/{*labels.nii.gz,*t1.nii.gz}",
+    .fromFilePairs("$root/**/{$params.labels_img_prefix*labels.nii.gz,*t1.nii.gz}",
                     size: 2,
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
 in_transfo = Channel
-    .fromFilePairs("$root/**/{output0GenericAffine.mat,output1Warp.nii.gz}",
+    .fromFilePairs("$root/**/{*0GenericAffine.mat,*1Warp.nii.gz}",
                     size: 2,
                     maxDepth:1,
                     flat: true) {it.parent.name}
@@ -159,30 +162,12 @@ process Transform_T1_Labels {
     """
 }
 
+
 in_tracking
-    .into{tracking_for_concatenate;tracking_for_kernel}
-
-tracking_for_concatenate
-    .join(anat_for_concatenate)
-    .set{trackings_anat_for_concatenate}
-
-process Concatenate_Tracking {
-    cpus 2
-
-    input:
-    set sid, file(trackings), file(ref) from trackings_anat_for_concatenate
-
-    output:
-    set sid, "${sid}__tracking_concat_ic.trk" into tracking_for_decompose
-
-    script:
-    """
-    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --ignore_invalid --reference $ref
-    scil_remove_invalid_streamlines.py tracking_concat.trk "${sid}__tracking_concat_ic.trk" --remove_single --remove_overlapping
-    """
-}
+    .into{tracking_for_decompose;tracking_for_kernel}
 
 tracking_for_decompose
+    .join(anat_for_concatenate)
     .join(labels_for_decompose)
     .set{tracking_labels_for_decompose}
 
@@ -190,7 +175,7 @@ process Decompose_Connectivity {
     cpus 2
 
     input:
-    set sid, file(tracking), file(labels) from tracking_labels_for_decompose
+    set sid, file(trackings), file(anat), file(labels) from tracking_labels_for_decompose
 
     output:
     set sid, "${sid}__decompose.h5" into h5_for_commit, h5_for_skip_commit
@@ -209,7 +194,10 @@ process Decompose_Connectivity {
     if $params.no_remove_outliers; then
         no_remove_outliers_arg="--no_remove_outliers"
     fi
-    scil_decompose_connectivity.py $tracking $labels "${sid}__decompose.h5" --no_remove_curv_dev \
+    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $anat --ignore_invalid
+    scil_remove_invalid_streamlines.py tracking_concat.trk tracking_concat_ic.trk --remove_single --remove_overlapping
+
+    scil_decompose_connectivity.py tracking_concat.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
         \$no_pruning_arg \$no_remove_loops_arg \$no_remove_outliers_arg --min_length $params.min_length \
         --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
         --outlier_threshold $params.outlier_threshold
@@ -223,7 +211,7 @@ data_for_kernels
 
 process Compute_Kernel {
     cpus 1
-    publishDir = {"./results_conn/$task.process"}
+    publishDir = "${params.output_dir}/Compute_Kernel"
 
     input:
     set sid, file(bval), file(bvec), file(dwi), file(peaks), file(trackings) from data_tracking_for_kernel
@@ -236,6 +224,7 @@ process Compute_Kernel {
 
     script:
     """
+    echo $params.output_dir
     ball_stick_arg=""
     perp_diff=""
     if $params.ball_stick; then
@@ -395,7 +384,7 @@ h5_for_similarity
 
 process Average_Connections {
     cpus params.processes_avg_similarity
-    publishDir = {"./results_conn/$task.process"}
+    publishDir = "$params.avg_conn_output_dir"
 
     input:
     file(all_h5) from all_h5_for_similarity
@@ -434,7 +423,7 @@ else {
 
 process Compute_Connectivity_with_similiarity {
     cpus params.processes_connectivity
-    publishDir = {"./results_conn/$sid/Compute_Connectivity"}
+    publishDir = "${params.output_dir}/Compute_Connectivity"
 
     input:
     set sid, file(h5), file(labels), file(metrics), file(avg_edges), file(labels_list) from h5_labels_similarity_list_for_compute
@@ -463,7 +452,7 @@ process Compute_Connectivity_with_similiarity {
 
 process Compute_Connectivity_without_similiarity {
     cpus params.processes_connectivity
-    publishDir = {"./results_conn/$sid/Compute_Connectivity"}
+    publishDir = "${params.output_dir}/Compute_Connectivity"
 
     input:
     set sid, file(h5), file(labels), file(metrics), file(labels_list) from h5_labels_list_for_compute

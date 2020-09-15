@@ -11,11 +11,11 @@ must be in diffusion space with compatible headers.
 
 It is mandatory that all grouped input either have identical prefix or no
 prefix at all.
-For example, *labels.nii.gz and *t1.nii.gz should either be named:
-labels.nii.gz, t1.nii.gz OR SUBJID_labels.nii.gz, SUBJID_t1.nii.gz.
+
+*labels.nii.gz and t1.nii.gz must have the same prefix in order to be read properly.
 
 *dwi.nii.gz, *dwi.bval, *dwi.bvec, *fodf.nii.gz, *peaks.nii.gz must also have
-the same suffixes in order to be read properly.
+the same prefix in order to be read properly.
 
 The file *tracking*.[fib,trk,tck] must also follow this convention, but can
 have any suffixes.
@@ -34,6 +34,7 @@ DESCRIPTION
                                                 │   │── *t1.nii.gz
                                                 │   │── *1Warp.nii.gz
                                                 │   │── *0GenericAffine.mat
+                                                │   │── *1Warp.nii.gz
                                                 │   │── *dwi.nii.gz (optional)
                                                 │   │── *dwi.bval (optional)
                                                 │   │── *dwi.bvec (optional)
@@ -46,6 +47,8 @@ DESCRIPTION
 
     --template                                  Template used for registration in a common space for similarity/viz
     --labels_list                               Complete (expected) labels_list of the atlas used
+    --labels_img_prefix                         Specify a prefix for the labels to use (when dealing with multiple input labels)
+    --output_dir                                Specify a new output directory to avoid overwriting results (when dealing with multiple input labels) ($output_dir)
 
 OPTIONAL ARGUMENTS (current value)
     --run_commit                                Run COMMIT on the tractogram ($run_commit)
