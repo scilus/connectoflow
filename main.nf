@@ -423,7 +423,7 @@ else {
 
 process Compute_Connectivity_with_similiarity {
     cpus params.processes_connectivity
-    publishDir = "${params.output_dir}/Compute_Connectivity"
+    publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
     set sid, file(h5), file(labels), file(metrics), file(avg_edges), file(labels_list) from h5_labels_similarity_list_for_compute
@@ -452,7 +452,7 @@ process Compute_Connectivity_with_similiarity {
 
 process Compute_Connectivity_without_similiarity {
     cpus params.processes_connectivity
-    publishDir = "${params.output_dir}/Compute_Connectivity"
+    publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
     set sid, file(h5), file(labels), file(metrics), file(labels_list) from h5_labels_list_for_compute
