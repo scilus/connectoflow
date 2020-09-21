@@ -95,7 +95,7 @@ log.info ""
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
 in_t1_labels = Channel
-    .fromFilePairs("$root/**/{$params.labels_img_prefix*labels.nii.gz,*t1.nii.gz}",
+    .fromFilePairs("$root/**/{*$params.labels_img_prefix*labels.nii.gz,*t1.nii.gz}",
                     size: 2,
                     maxDepth:1,
                     flat: true) {it.parent.name}
