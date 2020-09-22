@@ -12,17 +12,22 @@ must be in diffusion space with compatible headers.
 It is mandatory that all grouped input either have identical prefix or no
 prefix at all.
 
-*labels.nii.gz and t1.nii.gz must have the same prefix in order to be read properly.
+- *labels.nii.gz and t1.nii.gz must have the same prefix in order to be read properly.
 
-*dwi.nii.gz, *dwi.bval, *dwi.bvec, *fodf.nii.gz, *peaks.nii.gz must also have
+- *dwi.nii.gz, *dwi.bval, *dwi.bvec, *fodf.nii.gz, *peaks.nii.gz must also have
 the same prefix in order to be read properly.
 
-The file *tracking*.[fib,trk,tck] must also follow this convention, but can
-have any suffixes.
+- *tracking*.[fib,trk,tck] must also follow this convention, but can
+have any suffixes. This support multiple files.
+
+If you do not provide dwi.nii.gz/bval/bvec, use --run_commit false
+If you do not provide fodf/peaks.nii.gz, use --run_afd_rd false
+If you use a large number of cpu per node (e.g >20) makes sure the option
+--processes_avg_similarity is set to that number to use all the cpu of the node.
 
 USAGE
 
-nextflow run main.nf [OPTIONAL_ARGUMENTS] --root
+nextflow run main.nf [OPTIONAL_ARGUMENTS] --root --template --labels_list
 
 DESCRIPTION
 
@@ -30,11 +35,10 @@ DESCRIPTION
                                                 [root]
                                                 ├── S1
                                                 │   │── *tracking*.[fib,trk,tck]
-                                                │   │── *labels.nii.gz
-                                                │   │── *t1.nii.gz
-                                                │   │── *1Warp.nii.gz
-                                                │   │── *0GenericAffine.mat
-                                                │   │── *1Warp.nii.gz
+                                                │   │── *labels.nii.gz (native T1 space)
+                                                │   │── *t1.nii.gz (native T1 space)
+                                                │   │── *1Warp.nii.gz (native T1 space to diff space)
+                                                │   │── *0GenericAffine.mat (native T1 space to diff space)
                                                 │   │── *dwi.nii.gz (optional)
                                                 │   │── *dwi.bval (optional)
                                                 │   │── *dwi.bvec (optional)
