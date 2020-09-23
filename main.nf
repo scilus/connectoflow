@@ -194,7 +194,13 @@ process Decompose_Connectivity {
     if $params.no_remove_outliers; then
         no_remove_outliers_arg="--no_remove_outliers"
     fi
-    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $anat --ignore_invalid
+    if [ `echo $trackings | wc -w` -gt 1 ]; then
+        scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $anat --ignore_invalid
+        echo "==A"
+    else
+        mv $trackings tracking_concat.trk
+        echo "--B"
+    fi
 
     scil_decompose_connectivity.py tracking_concat.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
         \$no_pruning_arg \$no_remove_loops_arg \$no_remove_outliers_arg --min_length $params.min_length \
