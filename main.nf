@@ -158,7 +158,7 @@ process Transform_T1_Labels {
     cpus 1
 
     input:
-    set sid, file(labels), file(anat), file(mat), file(warp) from anat_for_transformation
+    set sid, file(anat), file(labels), file(mat), file(warp) from anat_for_transformation
 
     output:
     set sid, "${sid}__labels_warped_int16.nii.gz" into labels_for_transformation, labels_for_decompose
