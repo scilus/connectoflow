@@ -116,11 +116,10 @@ in_transfo = Channel
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
-Channel
-    .fromPath("$root/**/*tracking*.*",
-                    maxDepth:1)
-    .map{[it.parent.name, it]}
-    .set{in_tracking}
+in_tracking = Channel
+    .fromFilePairs("$root/**/{*tracking*.*,}",
+                    size: -1,
+                    maxDepth:1) {it.parent.name}
 
 Channel
     .fromPath("$root/**/*fodf.nii.gz",
@@ -207,10 +206,8 @@ process Decompose_Connectivity {
     fi
     if [ `echo $trackings | wc -w` -gt 1 ]; then
         scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $anat --ignore_invalid
-        echo "==A"
     else
         mv $trackings tracking_concat.trk
-        echo "--B"
     fi
 
     scil_decompose_connectivity.py tracking_concat.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
