@@ -95,7 +95,7 @@ log.info ""
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
 Channel
-    .fromPath("$root/**/*$params.labels_img_prefix*t1.nii.gz",
+    .fromPath("$root/**/*t1.nii.gz",
                     maxDepth:1)
     .map{[it.parent.name, it]}
     .set{in_t1}
