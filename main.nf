@@ -94,11 +94,21 @@ log.info ""
 
 root = file(params.root)
 /* Watch out, files are ordered alphabetically in channel */
-in_t1_labels = Channel
-    .fromFilePairs("$root/**/{*$params.labels_img_prefix*labels.nii.gz,*t1.nii.gz}",
-                    size: 2,
-                    maxDepth:1,
-                    flat: true) {it.parent.name}
+Channel
+    .fromPath("$root/**/*$params.labels_img_prefix*t1.nii.gz",
+                    maxDepth:1)
+    .map{[it.parent.name, it]}
+    .set{in_t1}
+
+Channel
+    .fromPath("$root/**/*$params.labels_img_prefix*labels.nii.gz",
+                    maxDepth:1)
+    .map{[it.parent.name, it]}
+    .set{in_labels}
+
+in_t1
+    .join(in_labels)
+    .set{in_t1_labels}
 
 in_transfo = Channel
     .fromFilePairs("$root/**/{*0GenericAffine.mat,*1Warp.nii.gz}",
@@ -106,16 +116,17 @@ in_transfo = Channel
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
-in_tracking = Channel
-    .fromFilePairs("$root/**/{*tracking*.*,}",
-                    size: -1,
-                    maxDepth:1) {it.parent.name}
+Channel
+    .fromPath("$root/**/*tracking*.*",
+                    maxDepth:1)
+    .map{[it.parent.name, it]}
+    .set{in_tracking}
 
-fodf_for_afd_rd = Channel
-    .fromFilePairs("$root/**/*fodf.nii.gz",
-                    size: 1,
-                    maxDepth:1,
-                    flat: true) {it.parent.name}
+Channel
+    .fromPath("$root/**/*fodf.nii.gz",
+                    maxDepth:1)
+    .map{[it.parent.name, it]}
+    .set{fodf_for_afd_rd}
 
 Channel.fromPath(file(params.template))
     .into{template_for_registration;template_for_transformation_data;template_for_transformation_metrics}
