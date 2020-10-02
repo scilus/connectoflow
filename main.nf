@@ -4,7 +4,8 @@ if(params.help) {
     usage = file("$baseDir/USAGE")
     cpu_count = Runtime.runtime.availableProcessors()
 
-    bindings = ["output_dir":"$params.output_dir",
+    bindings = ["apply_t1_labels_transfo":"$params.apply_t1_labels_transfo",
+                "output_dir":"$params.output_dir",
                 "run_commit":"$params.run_commit",
                 "b_thr":"$params.b_thr",
                 "nbr_dir":"$params.nbr_dir",
@@ -63,6 +64,7 @@ log.info ""
 
 log.info "Options"
 log.info "======="
+log.info "Apply transformation: $params.apply_t1_labels_transfo"
 log.info "Run COMMIT: $params.run_commit"
 log.info "bval tolerance: $params.b_thr"
 log.info "Nbr directions: $params.nbr_dir"
@@ -106,10 +108,6 @@ Channel
     .map{[it.parent.name, it]}
     .set{in_labels}
 
-in_t1
-    .join(in_labels)
-    .set{in_t1_labels}
-
 in_transfo = Channel
     .fromFilePairs("$root/**/{*0GenericAffine.mat,*1Warp.nii.gz}",
                     size: 2,
@@ -150,10 +148,22 @@ in_dwi_data = Channel
         tuple(sid, bval, bvec, dwi, peaks)]}
     .separate(2)
 
+if (!params.apply_t1_labels_transfo) {
+    in_t1
+        .set{ori_anat}
+    in_labels
+        .set{ori_labels}
+    anat_for_transformation = Channel.empty()
+}
+else {
+    in_t1
+        .join(in_labels)
+        .join(in_transfo)
+        .set{anat_for_transformation}
+    ori_anat = Channel.empty()
+    ori_labels = Channel.empty()
+}
 
-in_t1_labels
-    .join(in_transfo)
-    .set{anat_for_transformation}
 process Transform_T1_Labels {
     cpus 1
 
@@ -161,8 +171,8 @@ process Transform_T1_Labels {
     set sid, file(anat), file(labels), file(mat), file(warp) from anat_for_transformation
 
     output:
-    set sid, "${sid}__labels_warped_int16.nii.gz" into labels_for_transformation, labels_for_decompose
-    set sid, "${sid}__t1_warped.nii.gz" into anat_for_registration, anat_for_concatenate, anat_for_metrics
+    set sid, "${sid}__labels_warped_int16.nii.gz" into transformed_labels
+    set sid, "${sid}__t1_warped.nii.gz" into transformed_anat
 
     script:
     """
@@ -172,6 +182,12 @@ process Transform_T1_Labels {
     """
 }
 
+ori_anat
+    .concat(transformed_anat)
+    .into{anat_for_registration;anat_for_concatenate;anat_for_metrics}
+ori_labels
+    .concat(transformed_labels)
+    .into{labels_for_transformation;labels_for_decompose}
 
 in_tracking
     .into{tracking_for_decompose;tracking_for_kernel}
@@ -182,7 +198,8 @@ tracking_for_decompose
     .set{tracking_labels_for_decompose}
 
 process Decompose_Connectivity {
-    cpus 2
+    cpus 1
+    memory params.decompose_memory_limit
 
     input:
     set sid, file(trackings), file(anat), file(labels) from tracking_labels_for_decompose
@@ -205,7 +222,7 @@ process Decompose_Connectivity {
         no_remove_outliers_arg="--no_remove_outliers"
     fi
     if [ `echo $trackings | wc -w` -gt 1 ]; then
-        scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $anat --ignore_invalid
+        scil_lazy_concatenate_streamlines.py $trackings tracking_concat.trk
     else
         mv $trackings tracking_concat.trk
     fi
@@ -224,6 +241,7 @@ data_for_kernels
 
 process Compute_Kernel {
     cpus 1
+    memory params.decompose_memory_limit
     publishDir = "${params.output_dir}/Compute_Kernel"
 
     input:
@@ -246,7 +264,11 @@ process Compute_Kernel {
         perp_diff="--perp_diff $params.perp_diff"
     fi
 
-    scil_streamlines_math.py concatenate $trackings tracking_concat.trk --reference $dwi --ignore_invalid
+    if [ `echo $trackings | wc -w` -gt 1 ]; then
+        scil_lazy_concatenate_streamlines.py $trackings tracking_concat.trk
+    else
+        mv $trackings tracking_concat.trk
+    fi
     scil_remove_invalid_streamlines.py tracking_concat.trk tracking_concat_ic.trk --remove_single --remove_overlapping
 
     scil_run_commit.py tracking_concat_ic.trk $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
@@ -292,7 +314,7 @@ process Run_COMMIT {
 
 if (!params.run_commit) {
     h5_for_skip_commit
-        .into{h5_for_afd_rdl;h5_for_skip_aft_rd}
+        .into{h5_for_afd_rd;h5_for_skip_aft_rd}
 }
 
 h5_for_afd_rd
