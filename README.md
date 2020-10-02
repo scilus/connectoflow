@@ -1,5 +1,5 @@
 # Connectoflow pipeline
-===================
+=======================
 
 Run our state-of-the-art connectivity pipeline
 

@@ -1,5 +1,5 @@
 Connectoflow pipeline
-===================
+=====================
 
 Run our state-of-the-art connectivity pipeline.
 T1 and labels must be provided in their original space (output from freesurfer
@@ -51,10 +51,10 @@ DESCRIPTION
 
     --template                                  Template used for registration in a common space for similarity/viz
     --labels_list                               Complete (expected) labels_list of the atlas used
-    --labels_img_prefix                         Specify a prefix for the labels to use (when dealing with multiple input labels)
-    --output_dir                                Specify a new output directory to avoid overwriting results (when dealing with multiple input labels) ($output_dir)
 
 OPTIONAL ARGUMENTS (current value)
+    --labels_img_prefix                         Specify a prefix for the labels to use (when dealing with multiple input labels)
+    --output_dir                                Specify a new output directory to avoid overwriting results (when dealing with multiple input labels) ($output_dir)
     --apply_t1_labels_transfo                   Apply the provided transformation to T1/Labels, typically used if the T1/Labels are not in diffusion space ($apply_t1_labels_transfo)
 
     --run_commit                                Run COMMIT on the tractogram ($run_commit)

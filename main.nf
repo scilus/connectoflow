@@ -208,19 +208,23 @@ process Decompose_Connectivity {
     set sid, "${sid}__decompose.h5" into h5_for_commit, h5_for_skip_commit
 
     script:
+    no_pruning_arg = ""
+    if (params.no_pruning) {
+        no_pruning_arg = "--no_pruning"
+    }
+    no_remove_loops_arg = ""
+    if (params.no_remove_loops) {
+        no_remove_loops_arg = "--no_remove_loops"
+    }
+    no_remove_outliers_arg = ""
+    if (params.no_pruning) {
+        no_remove_outliers_arg = "--no_pruning"
+    }
+    no_remove_outliers_arg = ""
+    if (params.no_remove_outliers) {
+        no_remove_outliers_arg = "--no_remove_outliers"
+    }
     """
-    no_pruning_arg=""
-    if $params.no_pruning; then
-        no_pruning_arg="--no_pruning"
-    fi
-    no_remove_loops_arg=""
-    if $params.no_remove_loops; then
-        no_remove_loops_arg="--no_remove_loops"
-    fi
-    no_remove_outliers_arg=""
-    if $params.no_remove_outliers; then
-        no_remove_outliers_arg="--no_remove_outliers"
-    fi
     if [ `echo $trackings | wc -w` -gt 1 ]; then
         scil_lazy_concatenate_streamlines.py $trackings tracking_concat.trk
     else
@@ -228,7 +232,7 @@ process Decompose_Connectivity {
     fi
 
     scil_decompose_connectivity.py tracking_concat.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
-        \$no_pruning_arg \$no_remove_loops_arg \$no_remove_outliers_arg --min_length $params.min_length \
+        $no_pruning_arg $no_remove_loops_arg $no_remove_outliers_arg --min_length $params.min_length \
         --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
         --outlier_threshold $params.outlier_threshold
     """
@@ -254,16 +258,15 @@ process Compute_Kernel {
     params.run_commit
 
     script:
+    ball_stick_arg = ""
+    perp_diff = ""
+    if (params.ball_stick) {
+        ball_stick_arg = "--ball_stick"
+    }
+    else {
+        perp_diff = "--perp_diff $params.perp_diff"
+    }
     """
-    echo $params.output_dir
-    ball_stick_arg=""
-    perp_diff=""
-    if $params.ball_stick; then
-        ball_stick_arg="--ball_stick"
-    else
-        perp_diff="--perp_diff $params.perp_diff"
-    fi
-
     if [ `echo $trackings | wc -w` -gt 1 ]; then
         scil_lazy_concatenate_streamlines.py $trackings tracking_concat.trk
     else
@@ -272,8 +275,8 @@ process Compute_Kernel {
     scil_remove_invalid_streamlines.py tracking_concat.trk tracking_concat_ic.trk --remove_single --remove_overlapping
 
     scil_run_commit.py tracking_concat_ic.trk $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
-        --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
-        --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff \
+        --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
+        --para_diff $params.para_diff $perp_diff --iso_diff $params.iso_diff \
         --save_kernels kernels/ --compute_only
     """
 }
@@ -297,17 +300,18 @@ process Run_COMMIT {
     params.run_commit
 
     script:
-    """
     ball_stick_arg=""
     perp_diff=""
-    if $params.ball_stick; then
+    if (params.ball_stick) {
         ball_stick_arg="--ball_stick"
-    else
+    }
+    else {
         perp_diff="--perp_diff $params.perp_diff"
-    fi
+    }
+    """
     scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
-        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \$ball_stick_arg \
-        --para_diff $params.para_diff \$perp_diff --iso_diff $params.iso_diff --load_kernel $kernels
+        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
+        --para_diff $params.para_diff $perp_diff --iso_diff $params.iso_diff --load_kernel $kernels
     mv "${sid}__results_bzs/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
 }
@@ -334,12 +338,12 @@ process Compute_AFD_RD {
     params.run_afd_rd
 
     script:
+    length_weighting_arg = ""
+    if (params.length_weighting) {
+        length_weighting_arg = "--length_weighting"
+    }
     """
-    length_weighting_arg=""
-    if $params.length_weighting; then
-        length_weighting_arg="--length_weighting"
-    fi
-    scil_compute_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.h5" \$length_weighting_arg \
+    scil_compute_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.h5" $length_weighting_arg \
         --sh_basis $params.sh_basis --processes $params.processes_afd_rd
     """
 }
