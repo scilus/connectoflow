@@ -288,6 +288,7 @@ data_for_commit
 
 process Run_COMMIT {
     cpus params.processes_commit
+    memory params.commit_memory_limit
 
     input:
     set sid, file(bval), file(bvec), file(dwi), file(peaks), file(h5), file(kernels) from data_tracking_kernel_for_commit
@@ -353,6 +354,8 @@ anat_for_registration
     .set{anats_for_registration}
 process Register_Anat {
     cpus params.processes_register
+    memory '2 GB'
+
     input:
     set sid, file(native_anat), file(template) from anats_for_registration
 
