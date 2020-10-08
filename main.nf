@@ -100,7 +100,7 @@ Channel
     .fromPath("$root/**/*t1.nii.gz",
                     maxDepth:1)
     .map{[it.parent.name, it]}
-    .set{in_t1}
+    .into{in_t1;subjects_for_count}
 
 Channel
     .fromPath("$root/**/*$params.labels_img_prefix*labels.nii.gz",
@@ -123,7 +123,7 @@ Channel
     .fromPath("$root/**/*fodf.nii.gz",
                     maxDepth:1)
     .map{[it.parent.name, it]}
-    .set{fodf_for_afd_rd}
+    .into{fodf_for_afd_rd;fodf_for_count}
 
 Channel.fromPath(file(params.template))
     .into{template_for_registration;template_for_transformation_data;template_for_transformation_metrics}
@@ -142,11 +142,42 @@ in_dwi_data = Channel
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
-(data_for_kernels, data_for_commit) = in_dwi_data
+(dwi_for_count, data_for_kernels, data_for_commit) = in_dwi_data
     .map{sid, bval, bvec, dwi, peaks -> 
-        [tuple(sid, bval, bvec, dwi, peaks),
+        [tuple(sid, dwi),
+        tuple(sid, bval, bvec, dwi, peaks),
         tuple(sid, bval, bvec, dwi, peaks)]}
-    .separate(2)
+    .separate(3)
+
+subjects_for_count.count().into{ number_subj_for_null_check; number_subj_for_compare_dwi; number_subj_for_compare_fodf}
+dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare }
+fodf_for_count.count().into{ fodf_for_null_check; fodf_for_compare }
+
+number_subj_for_null_check
+.subscribe{a -> if (a == 0)
+    error "Error ~ No subjects found. Please check the naming convention, your --root path."}
+
+run_commit = params.run_commit
+dwi_for_null_check
+.subscribe{a -> if (a == 0)
+    run_commit = false}
+
+run_afd_rd = params.run_afd_rd
+fodf_for_null_check
+.subscribe{a -> if (a == 0)
+    run_afd_rd = false}
+
+number_subj_for_compare_dwi
+    .concat(dwi_for_compare)
+    .toList()
+    .subscribe{a, b -> if (a != b && b > 0)
+    error "Error ~ Mismatch between the number of subjects and DWI"}
+
+number_subj_for_compare_fodf
+    .concat(fodf_for_compare)
+    .toList()
+    .subscribe{a, b -> if (a != b && b > 0)
+    error "Error ~ Mismatch between the number of subjects and FODF"}
 
 if (!params.apply_t1_labels_transfo) {
     in_t1
@@ -226,7 +257,7 @@ process Decompose_Connectivity {
     }
     """
     if [ `echo $trackings | wc -w` -gt 1 ]; then
-        scil_lazy_concatenate_streamlines.py $trackings tracking_concat.trk
+        scil_streamlines_math.py lazy_concatenate $trackings tracking_concat.trk
     else
         mv $trackings tracking_concat.trk
     fi
@@ -255,7 +286,7 @@ process Compute_Kernel {
     file("kernels/") into kernel_for_commit
 
     when:
-    params.run_commit
+    run_commit
 
     script:
     ball_stick_arg = ""
@@ -268,7 +299,7 @@ process Compute_Kernel {
     }
     """
     if [ `echo $trackings | wc -w` -gt 1 ]; then
-        scil_lazy_concatenate_streamlines.py $trackings tracking_concat.trk
+        scil_streamlines_math.py lazy_concatenate $trackings tracking_concat.trk
     else
         mv $trackings tracking_concat.trk
     fi
@@ -298,7 +329,7 @@ process Run_COMMIT {
     set sid, "${sid}__decompose_commit.h5" into h5_for_afd_rd
 
     when:
-    params.run_commit
+    run_commit
 
     script:
     ball_stick_arg=""
@@ -317,7 +348,7 @@ process Run_COMMIT {
     """
 }
 
-if (!params.run_commit) {
+if (!run_commit) {
     h5_for_skip_commit
         .into{h5_for_afd_rd;h5_for_skip_aft_rd}
 }
@@ -336,7 +367,7 @@ process Compute_AFD_RD {
     set sid, "${sid}__decompose_afd_rd.h5" into h5_for_transformation
 
     when:
-    params.run_afd_rd
+    run_afd_rd
 
     script:
     length_weighting_arg = ""
@@ -391,7 +422,7 @@ process Transform_Metrics {
     """
 }
 
-if (!params.run_afd_rd) {
+if (!run_afd_rd) {
     h5_for_skip_aft_rd
         .set{h5_for_transformation}
 }
