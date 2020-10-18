@@ -55,7 +55,7 @@ log.info "$workflow.repository - $workflow.revision [$workflow.commitId]"
 log.info ""
 
 log.info "[Inputs]"
-log.info "Root: $params.root"
+log.info "Root: $params.input"
 log.info "Tempalte: $params.template"
 log.info "Labels list: $params.labels_list"
 log.info "Labels image prefix: $params.labels_img_prefix"
@@ -94,7 +94,7 @@ log.info "Average / Similarity: $params.processes_avg_similarity"
 log.info "Compute Connectivity: $params.processes_connectivity"
 log.info ""
 
-root = file(params.root)
+root = file(params.input)
 /* Watch out, files are ordered alphabetically in channel */
 Channel
     .fromPath("$root/**/*t1.nii.gz",
@@ -155,7 +155,7 @@ fodf_for_count.count().into{ fodf_for_null_check; fodf_for_compare }
 
 number_subj_for_null_check
 .subscribe{a -> if (a == 0)
-    error "Error ~ No subjects found. Please check the naming convention, your --root path."}
+    error "Error ~ No subjects found. Please check the naming convention, your --input path."}
 
 run_commit = params.run_commit
 dwi_for_null_check
