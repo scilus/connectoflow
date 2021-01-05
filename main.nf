@@ -24,7 +24,7 @@ if(params.help) {
                 "sh_basis":"$params.sh_basis",
                 "run_afd_rd":"$params.run_afd_rd",
                 "use_similarity_metric":"$params.use_similarity_metric",
-                "nbr_of_samples":"$params.nbr_of_samples",
+                "nbr_subjects_for_avg_connections":"$params.nbr_subjects_for_avg_connections",
                 "processes_register":"$params.processes_register",
                 "processes_commit":"$params.processes_commit",
                 "processes_afd_rd":"$params.processes_afd_rd",
@@ -451,7 +451,7 @@ process Transform_Data {
 
 
 h5_for_similarity
-    .take(params.nbr_of_samples)
+    .take(params.nbr_subjects_for_avg_connections)
     .collect()
     .set{all_h5_for_similarity}
 
