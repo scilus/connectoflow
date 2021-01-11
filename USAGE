@@ -30,6 +30,11 @@ If you do not provide fodf/peaks.nii.gz, use --run_afd_rd false
 If you use a large number of cpu per node (e.g >20) makes sure the option
 --processes_avg_similarity is set to that number to use all the cpu of the node.
 
+Most processes have a duration directly related to the number of connections.
+Which is (NBR_PARCEL) * (NBR_PARCEL-1) / 2. Running connectoflow with a freesurfer
+parcellation is A LOT faster than with Brainnetome, which is A LOT faster than
+with Glasser, make sure to test & optimize calls before launching on clusters.
+
 USAGE
 
 nextflow run main.nf [OPTIONAL_ARGUMENTS] --input --template --labels_list
