@@ -224,7 +224,6 @@ in_tracking
     .into{tracking_for_decompose;tracking_for_kernel}
 
 tracking_for_decompose
-    .join(anat_for_concatenate)
     .join(labels_for_decompose)
     .set{tracking_labels_for_decompose}
 
@@ -233,7 +232,7 @@ process Decompose_Connectivity {
     memory params.decompose_memory_limit
 
     input:
-    set sid, file(trackings), file(anat), file(labels) from tracking_labels_for_decompose
+    set sid, file(trackings), file(labels) from tracking_labels_for_decompose
 
     output:
     set sid, "${sid}__decompose.h5" into h5_for_commit, h5_for_skip_commit
