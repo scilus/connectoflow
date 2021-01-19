@@ -39,7 +39,7 @@ if(params.help) {
 }
 
 log.info "Run Connectivity Construction"
-log.info "========================="
+log.info "============================="
 log.info ""
 
 log.info ""
@@ -56,7 +56,7 @@ log.info ""
 
 log.info "[Inputs]"
 log.info "Root: $params.input"
-log.info "Tempalte: $params.template"
+log.info "Template: $params.template"
 log.info "Labels list: $params.labels_list"
 log.info "Labels image prefix: $params.labels_img_prefix"
 log.info "Output directory: $params.output_dir"
