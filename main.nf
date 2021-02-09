@@ -343,7 +343,7 @@ process Run_COMMIT {
     scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
         --para_diff $params.para_diff $perp_diff --iso_diff $params.iso_diff --load_kernel $kernels
-    mv "${sid}__results_bzs/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
+    mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
 }
 
