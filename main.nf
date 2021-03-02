@@ -126,7 +126,7 @@ Channel
     .into{fodf_for_afd_rd;fodf_for_count}
 
 Channel
-    .fromFilePairs("$params.input/**/lesion_mask.nii.gz",
+    .fromFilePairs("$params.input/**/*lesion_mask.nii.gz",
         size: -1) { it.parent.name }
     .set{lesion_for_lesion_load}
 
