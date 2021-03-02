@@ -54,6 +54,7 @@ DESCRIPTION
                                                 │   │── *dwi.bvec (optional)
                                                 │   │── *peaks.nii.gz (optional)
                                                 │   │── *fodf.nii.gz (optional)
+                                                │   │── *lesion_mask.nii.gz (optional, diff space)
                                                 |   └── metrics (optional)
                                                 |       └── METRIC_NAME.nii.gz
                                                 └── S2

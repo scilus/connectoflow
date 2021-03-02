@@ -125,8 +125,13 @@ Channel
     .map{[it.parent.name, it]}
     .into{fodf_for_afd_rd;fodf_for_count}
 
+Channel
+    .fromFilePairs("$params.input/**/lesion_mask.nii.gz",
+        size: -1) { it.parent.name }
+    .set{lesion_for_lesion_load}
+
 Channel.fromPath(file(params.template))
-    .into{template_for_registration;template_for_transformation_data;template_for_transformation_metrics}
+    .into{template_for_registration;template_for_transformation_data;template_for_transformation_metrics;template_for_transformation_lesions}
 
 Channel.fromPath(file(params.labels_list))
     .into{labels_list_for_compute;labels_list_for_visualize}
@@ -215,7 +220,7 @@ process Transform_T1_Labels {
 
 ori_anat
     .concat(transformed_anat)
-    .into{anat_for_registration;anat_for_concatenate;anat_for_metrics}
+    .into{anat_for_registration;anat_for_concatenate;anat_for_metrics;anat_for_lesions}
 ori_labels
     .concat(transformed_labels)
     .into{labels_for_transformation;labels_for_decompose}
@@ -390,7 +395,7 @@ process Register_Anat {
     set sid, file(native_anat), file(template) from anats_for_registration
 
     output:
-    set sid, "${sid}__output0GenericAffine.mat", "${sid}__output1Warp.nii.gz", "${sid}__output1InverseWarp.nii.gz"  into transformation_for_data, transformation_for_metrics
+    set sid, "${sid}__output0GenericAffine.mat", "${sid}__output1Warp.nii.gz", "${sid}__output1InverseWarp.nii.gz"  into transformation_for_data, transformation_for_metrics, transformation_for_lesions
     file "${sid}__outputWarped.nii.gz"
     script:
     """
@@ -418,6 +423,27 @@ process Transform_Metrics {
     script:
     """
     antsApplyTransforms -d 3 -i $metric -r $template -t $warp $transfo -o ${metric.getSimpleName()}_mni.nii.gz
+    """
+}
+
+lesion_for_lesion_load
+    .join(transformation_for_lesions)
+    .combine(template_for_transformation_lesions)
+    .set{lesions_transformation_for_data}
+
+process Transform_Lesions {
+    cpus 1
+
+    input:
+    set sid, file(lesion), file(transfo), file(warp), file(inverse_warp), file(template) from lesions_transformation_for_data
+
+    output:
+    set sid, "lesion_mask_mni.nii.gz" into lesions_for_compute
+
+    script:
+    """
+    antsApplyTransforms -d 3 -i $lesion -r $template -t $warp $transfo -o ${lesion.getSimpleName()}_mni.nii.gz -n NearestNeighbor
+    scil_image_math.py convert lesion_mask_mni.nii.gz lesion_mask_mni.nii.gz --data_type uint8 -f
     """
 }
 
@@ -474,6 +500,7 @@ process Average_Connections {
 }
 
 metrics_for_compute
+    .concat(lesions_for_compute)
     .groupTuple()
     .set{all_metrics_for_compute}
 
@@ -511,14 +538,23 @@ process Compute_Connectivity_with_similiarity {
         base_name=\$(basename \${metric/_mni/})
         base_name=\${base_name/_warped/}
         base_name=\${base_name/"${sid}__"/}
-        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \$base_name .nii.gz).npy"
+        if [[ \$metric == lesion_mask_mni.nii.gz ]]; then
+            lesion_args=--lesion_load \$metric ./
+        else
+            metrics_args="\${metrics_args} --metrics \${metric} \$(basename \$base_name .nii.gz).npy"
+        fi
     done
 
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
-        --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection \
-        --include_dps ./ --processes $params.processes_connectivity
-    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
-    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list \
+        --volume vol.npy --streamline_count sc.npy \
+        --length len.npy --similarity $avg_edges sim.npy \$metrics_args \ 
+        --density_weighting --no_self_connection \
+        --include_dps ./ \$lesion_args \
+        --processes $params.processes_connectivity
+    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
+        --parcel_volume $labels $labels_list
+    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
+        --parcel_volume $labels $labels_list
     """
 }
 
@@ -540,14 +576,22 @@ process Compute_Connectivity_without_similiarity {
         base_name=\$(basename \${metric/_mni/})
         base_name=\${base_name/_warped/}
         base_name=\${base_name/"${sid}__"/}
-        metrics_args="\${metrics_args} --metrics \${metric} \$(basename \$base_name .nii.gz).npy"
+        if [[ \$metric == lesion_mask_mni.nii.gz ]]; then
+            lesion_args="--lesion_load \$metric ./"
+        else
+            metrics_args="\${metrics_args} --metrics \${metric} \$(basename \$base_name .nii.gz).npy"
+        fi
     done
 
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
-        --length len.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ \
+    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list \
+        --volume vol.npy --streamline_count sc.npy \
+        --length len.npy \$metrics_args --density_weighting \
+        --no_self_connection --include_dps ./ \$lesion_args \
         --processes $params.processes_connectivity
-    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
-    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
+    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
+        --parcel_volume $labels $labels_list
+    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
+        --parcel_volume $labels $labels_list
     """
 }
 
