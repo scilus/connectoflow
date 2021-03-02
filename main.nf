@@ -534,6 +534,7 @@ process Compute_Connectivity_with_similiarity {
     String metrics_list = metrics.join(", ").replace(',', '')
     """
     metrics_args=""
+    lesion_args=""
     for metric in $metrics_list; do
         base_name=\$(basename \${metric/_mni/})
         base_name=\${base_name/_warped/}
@@ -572,6 +573,7 @@ process Compute_Connectivity_without_similiarity {
     String metrics_list = metrics.join(", ").replace(',', '')
     """
     metrics_args=""
+    lesion_args=""
     for metric in $metrics_list; do
         base_name=\$(basename \${metric/_mni/})
         base_name=\${base_name/_warped/}
