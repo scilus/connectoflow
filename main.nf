@@ -539,7 +539,7 @@ process Compute_Connectivity_with_similiarity {
         base_name=\${base_name/_warped/}
         base_name=\${base_name/"${sid}__"/}
         if [[ \$metric == lesion_mask_mni.nii.gz ]]; then
-            lesion_args=--lesion_load \$metric ./
+            lesion_args="--lesion_load \$metric ./"
         else
             metrics_args="\${metrics_args} --metrics \${metric} \$(basename \$base_name .nii.gz).npy"
         fi
@@ -547,7 +547,7 @@ process Compute_Connectivity_with_similiarity {
 
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list \
         --volume vol.npy --streamline_count sc.npy \
-        --length len.npy --similarity $avg_edges sim.npy \$metrics_args \ 
+        --length len.npy --similarity $avg_edges sim.npy \$metrics_args \
         --density_weighting --no_self_connection \
         --include_dps ./ \$lesion_args \
         --processes $params.processes_connectivity
