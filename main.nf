@@ -349,7 +349,7 @@ process Run_COMMIT {
 
 if (!run_commit) {
     h5_for_skip_commit
-        .into{h5_for_afd_rd;h5_for_skip_aft_rd}
+        .into{h5_for_afd_rd;h5_for_skip_afd_rd}
 }
 
 h5_for_afd_rd
@@ -422,7 +422,7 @@ process Transform_Metrics {
 }
 
 if (!run_afd_rd) {
-    h5_for_skip_aft_rd
+    h5_for_skip_afd_rd
         .set{h5_for_transformation}
 }
 h5_for_transformation
