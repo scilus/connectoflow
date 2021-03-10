@@ -325,7 +325,7 @@ process Run_COMMIT {
 
     output:
     set sid, "${sid}__results_bzs/"
-    set sid, "${sid}__decompose_commit.h5" into h5_for_afd_rd
+    set sid, "${sid}__decompose_commit.h5" into h5_for_afd_rd, h5_for_skip_afd_rd
 
     when:
     run_commit
