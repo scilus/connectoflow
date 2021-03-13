@@ -260,8 +260,8 @@ process Decompose_Connectivity {
     else
         mv $trackings tracking_concat.trk
     fi
-
-    scil_decompose_connectivity.py tracking_concat.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
+    scil_remove_invalid_streamlines.py tracking_concat.trk tracking_concat_ic.trk --remove_single --remove_overlapping
+    scil_decompose_connectivity.py tracking_concat_ic.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
         $no_pruning_arg $no_remove_loops_arg $no_remove_outliers_arg --min_length $params.min_length \
         --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
         --outlier_threshold $params.outlier_threshold
