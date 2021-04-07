@@ -337,7 +337,9 @@ process Run_COMMIT {
     commit2_arg=""
     if (params.use_commit2) {
         commit2_arg="--commit2"
-        params.ball_stick=true
+        if (!params.ball_stick) {
+            params.ball_stick=true
+        }
     }
     if (params.ball_stick) {
         ball_stick_arg="--ball_stick"
