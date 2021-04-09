@@ -96,6 +96,8 @@ OPTIONAL ARGUMENTS (current value)
     --processes_afd_rd                          Number of processes for AFD/RD task ($processes_afd_rd)
     --processes_avg_similarity                  Number of processes for average similarity task ($processes_avg_similarity)
     --processes_connectivity                    Number of processes for compute connectivity task ($processes_connectivity) 
+    --processes                                 The number of parallel processes to launch ($cpu_count).
+                                                Only affects the local scheduler.
 
 NOTES
 
