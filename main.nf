@@ -67,6 +67,7 @@ log.info "Options"
 log.info "======="
 log.info "Apply transformation: $params.apply_t1_labels_transfo"
 log.info "Run COMMIT: $params.run_commit"
+log.info "Use COMMIT2: $params.use_commit2"
 log.info "bval tolerance: $params.b_thr"
 log.info "Nbr directions: $params.nbr_dir"
 log.info "Ball & Stick: $params.ball_stick"
@@ -352,8 +353,16 @@ process Run_COMMIT {
         --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
         --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
         --load_kernel $kernels
+    """
+    if (params.use_commit2) {
+    """
     mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
+    else {
+    """
+    mv "${sid}__results_bzs/commit_2/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
+    """
+    }
 }
 
 if (!run_commit) {
