@@ -335,32 +335,27 @@ process Run_COMMIT {
     script:
     ball_stick_arg=""
     perp_diff_arg=""
-    commit2_arg=""
-    if (params.use_commit2) {
-        commit2_arg="--commit2"
-        if (!params.ball_stick) {
-            params.ball_stick=true
-        }
-    }
     if (params.ball_stick) {
         ball_stick_arg="--ball_stick"
     }
     else {
         perp_diff_arg="--perp_diff $params.perp_diff"
     }
-    """
-    scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" $commit2_arg --in_peaks $peaks \
-        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
-        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
-        --load_kernel $kernels
-    """
     if (params.use_commit2) {
     """
+    scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
+        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \
+        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
+        --load_kernel $kernels
     mv "${sid}__results_bzs/commit_2/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
     }
     else {
     """
+    scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
+        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
+        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
+        --load_kernel $kernels
     mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
     }
