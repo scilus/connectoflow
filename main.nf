@@ -358,6 +358,7 @@ process Run_COMMIT {
     """
     mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
+    }
     else {
     """
     mv "${sid}__results_bzs/commit_2/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
