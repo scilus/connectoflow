@@ -23,6 +23,7 @@ if(params.help) {
                 "length_weighting":"$params.length_weighting",
                 "sh_basis":"$params.sh_basis",
                 "run_afd_rd":"$params.run_afd_rd",
+                "min_lesion_vol":"$params.min_lesion_vol",
                 "use_similarity_metric":"$params.use_similarity_metric",
                 "nbr_subjects_for_avg_connections":"$params.nbr_subjects_for_avg_connections",
                 "processes_register":"$params.processes_register",
@@ -82,7 +83,9 @@ log.info "Outliers removal threshold: $params.outlier_threshold"
 log.info "Run AFD & RD: $params.run_afd_rd"
 log.info "Length weighting: $params.length_weighting"
 log.info "SH basis: $params.sh_basis"
+log.info "Minimum lesion volume: $params.min_lesion_vol"
 log.info "Use similarity metric: $params.use_similarity_metric"
+log.info "Average from N subjects: $params.nbr_subjects_for_avg_connections"
 log.info ""
 
 log.info "Number of processes per tasks"
@@ -550,7 +553,7 @@ process Compute_Connectivity_with_similiarity {
         --volume vol.npy --streamline_count sc.npy \
         --length len.npy --similarity $avg_edges sim.npy \$metrics_args \
         --density_weighting --no_self_connection \
-        --include_dps ./ \$lesion_args \
+        --include_dps ./ \$lesion_args --min_lesion_vol $params.min_lesion_vol \
         --processes $params.processes_connectivity
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list

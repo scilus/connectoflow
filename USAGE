@@ -35,6 +35,10 @@ Which is (NBR_PARCEL) * (NBR_PARCEL-1) / 2. Running connectoflow with a freesurf
 parcellation is A LOT faster than with Brainnetome, which is A LOT faster than
 with Glasser, make sure to test & optimize calls before launching on clusters.
 
+If providing a lesion mask, the nifti should be a uint8 binary image representing
+the voxel that are considered lesions. These lesions should have been taken into account
+when generating the tractogram (to allow tractography within the lesions).
+
 USAGE
 
 nextflow run main.nf [OPTIONAL_ARGUMENTS] --input --template --labels_list
@@ -88,8 +92,9 @@ OPTIONAL ARGUMENTS (current value)
     --length_weighting                          If set, will weigh the AFD values according to segment lengths for afd/rd ($length_weighting)
     --sh_basis                                  Spherical harmonics basis used for the SH coefficients  ($sh_basis)
 
+    --min_lesion_vol                            To be consider 'a lesion' for the pipeline, a lesion must be at least ($min_lesion_vol) mm3.
     --use_similarity_metric                     Compute the average shape distance for each connection ($use_similarity_metric)
-    --nbr_subjects_for_avg_connections                             The average shape is computed from a random subset of subjects ($nbr_subjects_for_avg_connections)
+    --nbr_subjects_for_avg_connections          The average shape is computed from a random subset of subjects ($nbr_subjects_for_avg_connections)
 
     --processes_register                        Number of processes for registration task ($processes_register)
     --processes_commit                          Number of processes for COMMIT task ($processes_commit)
