@@ -292,11 +292,11 @@ process Compute_Kernel {
     script:
     ball_stick_arg = ""
     perp_diff_arg = ""
-    if (params.ball_stick) {
-        ball_stick_arg = "--ball_stick"
+    if (params.ball_stick || params.use_commit2) {
+        ball_stick_arg="--ball_stick"
     }
     else {
-        perp_diff_arg = "--perp_diff $params.perp_diff"
+        perp_diff_arg="--perp_diff $params.perp_diff"
     }
     """
     if [ `echo $trackings | wc -w` -gt 1 ]; then
