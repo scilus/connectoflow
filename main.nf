@@ -30,7 +30,8 @@ if(params.help) {
                 "processes_commit":"$params.processes_commit",
                 "processes_afd_rd":"$params.processes_afd_rd",
                 "processes_avg_similarity":"$params.processes_avg_similarity",
-                "processes_connectivity":"$params.processes_connectivity"]
+                "processes_connectivity":"$params.processes_connectivity",
+                "cpu_count":"$cpu_count"]
 
     engine = new groovy.text.SimpleTemplateEngine()
     template = engine.createTemplate(usage.text).make(bindings)
@@ -231,7 +232,7 @@ tracking_for_decompose
 
 process Decompose_Connectivity {
     cpus 1
-    memory params.decompose_memory_limit
+    memory { params.decompose_memory_limit * task.attempt }
 
     input:
     set sid, file(trackings), file(labels) from tracking_labels_for_decompose
