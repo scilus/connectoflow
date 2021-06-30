@@ -532,6 +532,7 @@ process Compute_Connectivity_with_similiarity {
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
         --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection \
         --include_dps ./ --processes $params.processes_connectivity
+    rm rd_fixel.npy
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
@@ -561,6 +562,7 @@ process Compute_Connectivity_without_similiarity {
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
         --length len.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ \
         --processes $params.processes_connectivity
+    rm rd_fixel.npy
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
