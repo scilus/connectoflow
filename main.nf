@@ -564,25 +564,18 @@ process Compute_Connectivity_with_similiarity {
         fi
     done
 
-<<<<<<< HEAD
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list \
         --volume vol.npy --streamline_count sc.npy \
         --length len.npy --similarity $avg_edges sim.npy \$metrics_args \
         --density_weighting --no_self_connection \
         --include_dps ./ \$lesion_args --min_lesion_vol $params.min_lesion_vol \
         --processes $params.processes_connectivity
+
+    rm rd_fixel.npy
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
         --parcel_volume $labels $labels_list
-=======
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
-        --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection \
-        --include_dps ./ --processes $params.processes_connectivity
-    rm rd_fixel.npy
-    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
-    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
->>>>>>> d8c0515607af6ba65b2b8ca522eb197512b77d37
     """
 }
 
@@ -617,16 +610,12 @@ process Compute_Connectivity_without_similiarity {
         --length len.npy \$metrics_args --density_weighting \
         --no_self_connection --include_dps ./ \$lesion_args \
         --processes $params.processes_connectivity
-<<<<<<< HEAD
+
+    rm rd_fixel.npy
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
         --parcel_volume $labels $labels_list
-=======
-    rm rd_fixel.npy
-    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
-    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
->>>>>>> d8c0515607af6ba65b2b8ca522eb197512b77d37
     """
 }
 
