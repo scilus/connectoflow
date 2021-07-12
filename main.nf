@@ -7,6 +7,7 @@ if(params.help) {
     bindings = ["apply_t1_labels_transfo":"$params.apply_t1_labels_transfo",
                 "output_dir":"$params.output_dir",
                 "run_commit":"$params.run_commit",
+                "use_commit2":"$params.use_commit2",
                 "b_thr":"$params.b_thr",
                 "nbr_dir":"$params.nbr_dir",
                 "ball_stick":"$params.ball_stick",
@@ -67,6 +68,7 @@ log.info "Options"
 log.info "======="
 log.info "Apply transformation: $params.apply_t1_labels_transfo"
 log.info "Run COMMIT: $params.run_commit"
+log.info "Use COMMIT2: $params.use_commit2"
 log.info "bval tolerance: $params.b_thr"
 log.info "Nbr directions: $params.nbr_dir"
 log.info "Ball & Stick: $params.ball_stick"
@@ -290,12 +292,12 @@ process Compute_Kernel {
 
     script:
     ball_stick_arg = ""
-    perp_diff = ""
-    if (params.ball_stick) {
-        ball_stick_arg = "--ball_stick"
+    perp_diff_arg = ""
+    if (params.ball_stick || params.use_commit2) {
+        ball_stick_arg="--ball_stick"
     }
     else {
-        perp_diff = "--perp_diff $params.perp_diff"
+        perp_diff_arg="--perp_diff $params.perp_diff"
     }
     """
     if [ `echo $trackings | wc -w` -gt 1 ]; then
@@ -307,7 +309,7 @@ process Compute_Kernel {
 
     scil_run_commit.py tracking_concat_ic.trk $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
-        --para_diff $params.para_diff $perp_diff --iso_diff $params.iso_diff \
+        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
         --save_kernels kernels/ --compute_only
     """
 }
@@ -333,19 +335,31 @@ process Run_COMMIT {
 
     script:
     ball_stick_arg=""
-    perp_diff=""
+    perp_diff_arg=""
     if (params.ball_stick) {
         ball_stick_arg="--ball_stick"
     }
     else {
-        perp_diff="--perp_diff $params.perp_diff"
+        perp_diff_arg="--perp_diff $params.perp_diff"
     }
+    if (params.use_commit2) {
+    """
+    scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
+        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \
+        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
+        --load_kernel $kernels
+    mv "${sid}__results_bzs/commit_2/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
+    """
+    }
+    else {
     """
     scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
-        --para_diff $params.para_diff $perp_diff --iso_diff $params.iso_diff --load_kernel $kernels
+        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
+        --load_kernel $kernels
     mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
+    }
 }
 
 if (!run_commit) {
@@ -518,6 +532,7 @@ process Compute_Connectivity_with_similiarity {
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
         --length len.npy --similarity $avg_edges sim.npy \$metrics_args --density_weighting --no_self_connection \
         --include_dps ./ --processes $params.processes_connectivity
+    rm rd_fixel.npy
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """
@@ -547,6 +562,7 @@ process Compute_Connectivity_without_similiarity {
     scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list --volume vol.npy --streamline_count sc.npy \
         --length len.npy \$metrics_args --density_weighting --no_self_connection --include_dps ./ \
         --processes $params.processes_connectivity
+    rm rd_fixel.npy
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy --parcel_volume $labels $labels_list
     """

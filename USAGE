@@ -68,6 +68,7 @@ OPTIONAL ARGUMENTS (current value)
     --apply_t1_labels_transfo                   Apply the provided transformation to T1/Labels, typically used if the T1/Labels are not in diffusion space ($apply_t1_labels_transfo)
 
     --run_commit                                Run COMMIT on the tractogram ($run_commit)
+    --use_commit2                               Use COMMIT2 rather than the original COMMIT ($use_commit2)
     --b_thr                                     Tolerance value to match b-value is on the same shell ($b_thr)
     --nbr_dir                                   Number of directions, (half sphere), representing the possible orientations of the response functions ($nbr_dir)
     --ball_stick                                Use the ball&Stick model. Disable the zeppelin compartment for single-shell data ($ball_stick)
