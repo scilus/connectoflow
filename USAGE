@@ -105,6 +105,15 @@ OPTIONAL ARGUMENTS (current value)
     --processes                                 The number of parallel processes to launch ($cpu_count).
                                                 Only affects the local scheduler.
 
+AVAILABLE PROFILES (using -profile option (e.g. -profile use_cuda,fully_reproducible))
+
+macos                                       When this profile is used, TractoFlow will modify a parameter (scratch) for MacOS users.
+
+large_dataset                               Double the allocate RAM for Decompose and COMMIT (6GB -> 12GB)
+
+fully_reproducible                          When this profile is used, all the parameters will be set to have 100% reproducible results.
+   
+
 NOTES
 
 To set the number of parallel processes to launch, please use:
