@@ -160,13 +160,18 @@ in_dwi_data = Channel
         tuple(sid, bval, bvec, dwi, peaks)]}
     .separate(3)
 
-subjects_for_count.count().into{ number_subj_for_null_check; number_subj_for_compare_dwi; number_subj_for_compare_fodf}
+subjects_for_count.count().into{ number_subj_for_null_check; number_subj_for_compare_dwi; number_subj_for_compare_fodf; number_subj_for_compare_similarity}
 dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare }
 fodf_for_count.count().into{ fodf_for_null_check; fodf_for_compare }
 
 number_subj_for_null_check
 .subscribe{a -> if (a == 0)
     error "Error ~ No subjects found. Please check the naming convention, your --input path."}
+
+number_subj_for_compare_similarity
+.subscribe{a -> if (a < params.nbr_subjects_for_avg_connections && params.use_similarity_metric)
+    error "Error --nbr_subjects_for_avg_connections is higher than the number of subjects. Please modify it or use --he number of subjects. Please modify it or use --use_similarity_metric"}
+
 
 run_commit = params.run_commit
 dwi_for_null_check

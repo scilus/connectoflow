@@ -7,6 +7,9 @@ or civet) and the affine and nonlinear transformation must bring these images
 to diffusion space. We recommand running the command scil_verify_space_attributes_compatibility
 with the t1 and labels to ensure they are indeed in the same space.
 
+The atlas must be stripped of the WM and CSF labels and only keep the cortical and
+subcortical labels (brainstem/cerebelum optional).
+
 The rest of the input (tracking, dwi, peaks, fodf and all metrics)
 must be in diffusion space with compatible headers. We recommand running the command 
 scil_verify_space_attributes_compatibility with the all the files mentioned above
@@ -38,6 +41,7 @@ with Glasser, make sure to test & optimize calls before launching on clusters.
 If providing a lesion mask, the nifti should be a uint8 binary image representing
 the voxel that are considered lesions. These lesions should have been taken into account
 when generating the tractogram (to allow tractography within the lesions).
+The lesion mask MUST BE in the same space as the DWI with the same header.
 
 USAGE
 
@@ -95,7 +99,7 @@ OPTIONAL ARGUMENTS (current value)
 
     --min_lesion_vol                            To be consider 'a lesion' for the pipeline, a lesion must be at least ($min_lesion_vol) mm3.
     --use_similarity_metric                     Compute the average shape distance for each connection ($use_similarity_metric)
-    --nbr_subjects_for_avg_connections          The average shape is computed from a random subset of subjects ($nbr_subjects_for_avg_connections)
+    --nbr_subjects_for_avg_connections          The average shape is computed from a random subset of subjects, must be equal or lower than the total number of subjects ($nbr_subjects_for_avg_connections)
 
     --processes_register                        Number of processes for registration task ($processes_register)
     --processes_commit                          Number of processes for COMMIT task ($processes_commit)
