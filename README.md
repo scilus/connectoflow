@@ -1,6 +1,8 @@
 # Connectoflow pipeline
 =======================
 
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/scilus/connectoflow)](https://github.com/scilus/connectoflow/releases)
+
 Run our state-of-the-art connectivity pipeline
 
 If you use this pipeline, please cite:
