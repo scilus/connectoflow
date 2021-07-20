@@ -7,6 +7,9 @@ or civet) and the affine and nonlinear transformation must bring these images
 to diffusion space. We recommand running the command scil_verify_space_attributes_compatibility
 with the t1 and labels to ensure they are indeed in the same space.
 
+The atlas must be stripped of the WM and CSF labels and only keep the cortical and
+subcortical labels (brainstem/cerebelum optional).
+
 The rest of the input (tracking, dwi, peaks, fodf and all metrics)
 must be in diffusion space with compatible headers. We recommand running the command 
 scil_verify_space_attributes_compatibility with the all the files mentioned above
@@ -35,6 +38,11 @@ Which is (NBR_PARCEL) * (NBR_PARCEL-1) / 2. Running connectoflow with a freesurf
 parcellation is A LOT faster than with Brainnetome, which is A LOT faster than
 with Glasser, make sure to test & optimize calls before launching on clusters.
 
+If providing a lesion mask, the nifti should be a uint8 binary image representing
+the voxel that are considered lesions. These lesions should have been taken into account
+when generating the tractogram (to allow tractography within the lesions).
+The lesion mask MUST BE in the same space as the DWI with the same header.
+
 USAGE
 
 nextflow run main.nf [OPTIONAL_ARGUMENTS] --input --template --labels_list
@@ -54,6 +62,7 @@ DESCRIPTION
                                                 │   │── *dwi.bvec (optional)
                                                 │   │── *peaks.nii.gz (optional)
                                                 │   │── *fodf.nii.gz (optional)
+                                                │   │── *lesion_mask.nii.gz (optional, diff space)
                                                 |   └── metrics (optional)
                                                 |       └── METRIC_NAME.nii.gz
                                                 └── S2
@@ -88,8 +97,9 @@ OPTIONAL ARGUMENTS (current value)
     --length_weighting                          If set, will weigh the AFD values according to segment lengths for afd/rd ($length_weighting)
     --sh_basis                                  Spherical harmonics basis used for the SH coefficients  ($sh_basis)
 
+    --min_lesion_vol                            To be consider 'a lesion' for the pipeline, a lesion must be at least ($min_lesion_vol) mm3.
     --use_similarity_metric                     Compute the average shape distance for each connection ($use_similarity_metric)
-    --nbr_subjects_for_avg_connections                             The average shape is computed from a random subset of subjects ($nbr_subjects_for_avg_connections)
+    --nbr_subjects_for_avg_connections          The average shape is computed from a random subset of subjects, must be equal or lower than the total number of subjects ($nbr_subjects_for_avg_connections)
 
     --processes_register                        Number of processes for registration task ($processes_register)
     --processes_commit                          Number of processes for COMMIT task ($processes_commit)
@@ -98,6 +108,15 @@ OPTIONAL ARGUMENTS (current value)
     --processes_connectivity                    Number of processes for compute connectivity task ($processes_connectivity) 
     --processes                                 The number of parallel processes to launch ($cpu_count).
                                                 Only affects the local scheduler.
+
+AVAILABLE PROFILES (using -profile option (e.g. -profile use_cuda,fully_reproducible))
+
+macos                                       When this profile is used, TractoFlow will modify a parameter (scratch) for MacOS users.
+
+large_dataset                               Double the allocate RAM for Decompose and COMMIT (6GB -> 12GB)
+
+fully_reproducible                          When this profile is used, all the parameters will be set to have 100% reproducible results.
+   
 
 NOTES
 
