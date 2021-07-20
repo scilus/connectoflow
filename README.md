@@ -20,6 +20,19 @@ Requirements
 - [Nextflow](https://www.nextflow.io)
 - [scilpy](https://github.com/scilus/scilpy)
 
+Singularity/Docker
+-----------
+If you are on Linux, we recommend using the Singularity to run connectoflow pipeline.
+If you have Singularity == 3.*, launch your Nextflow command with:
+`-with-singularity scilus/scilus:1.2.0_connectoflow-1.0.0`
+
+If you have rebuild singularity Singularity == 2.* image is available [here](http://scil.dinf.usherbrooke.ca/en/containers_list/scilus-1.2.0_connectoflow-1.0.0.img)
+Launch your Nextflow command with: `-with-singularity ABSOLUTE_PATH/scilus-1.2.0_connectoflow-1.0.0.img`
+
+If you are on MacOS or Windows, we recommend using the Docker container to run connectoflow pipeline.
+Launch your Nextflow command with:
+`-with-docker scilus/scilus:1.2.0_connectoflow-1.0.0`
+
 Usage
 -----
 
