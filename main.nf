@@ -154,7 +154,7 @@ in_dwi_data = Channel
                     flat: true) {it.parent.name}
 
 (dwi_for_count, data_for_kernels, data_for_commit) = in_dwi_data
-    .map{sid, bval, bvec, dwi, peaks -> 
+    .map{sid, bval, bvec, dwi, peaks ->
         [tuple(sid, dwi),
         tuple(sid, bval, bvec, dwi, peaks),
         tuple(sid, bval, bvec, dwi, peaks)]}
@@ -423,7 +423,7 @@ process Register_Anat {
     script:
     """
     antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.processes_register} -o "${sid}__output" -t s
-    """ 
+    """
 }
 
 in_opt_metrics
@@ -621,6 +621,12 @@ process Compute_Connectivity_without_similiarity {
         --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
         --parcel_volume $labels $labels_list
+
+    #!/usr/bin/env python
+    import numpy as np
+    for data in ["sc", "vol", "len", "sc_edge_normalized", "sc_vol_normalized"]:
+        curr_data = np.load(data + ".npy")
+        np.savetxt(data + ".csv", curr_data, delimiter=",")
     """
 }
 
