@@ -576,7 +576,7 @@ process Compute_Connectivity_with_similiarity {
         --include_dps ./ \$lesion_args --min_lesion_vol $params.min_lesion_vol \
         --processes $params.processes_connectivity
 
-    rm rd_fixel.npy
+    rm rd_fixel.npy -f
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
@@ -616,7 +616,7 @@ process Compute_Connectivity_without_similiarity {
         --no_self_connection --include_dps ./ \$lesion_args \
         --processes $params.processes_connectivity
 
-    rm rd_fixel.npy
+    rm rd_fixel.npy -f
     scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
