@@ -21,6 +21,8 @@ It is mandatory that all grouped input either have identical prefix or no
 prefix at all.
 
 - *labels.nii.gz and t1.nii.gz must have the same prefix in order to be read properly.
+    t1 must overlay with the labels and be skull-strip. If you use Tractoflow using 
+    the same input T1w image it should come from tractoflow BET_T1 process.
 
 - *dwi.nii.gz, *dwi.bval, *dwi.bvec, *fodf.nii.gz, *peaks.nii.gz must also have
 the same prefix in order to be read properly.
@@ -76,8 +78,9 @@ OPTIONAL ARGUMENTS (current value)
     --output_dir                                Specify a new output directory to avoid overwriting results (when dealing with multiple input labels) ($output_dir)
     --apply_t1_labels_transfo                   Apply the provided transformation to T1/Labels, typically used if the T1/Labels are not in diffusion space ($apply_t1_labels_transfo)
 
-    --run_commit                                Run COMMIT on the tractogram ($run_commit)
-    --use_commit2                               Use COMMIT2 rather than the original COMMIT ($use_commit2)
+    --run_commit                                Run COMMIT1 on the tractogram ($run_commit)
+    --use_commit2                               Use COMMIT2 rather than the original COMMIT1 
+                                                    (will replace the COMMIT1 output with COMMIT2) ($use_commit2)
     --b_thr                                     Tolerance value to match b-value is on the same shell ($b_thr)
     --nbr_dir                                   Number of directions, (half sphere), representing the possible orientations of the response functions ($nbr_dir)
     --ball_stick                                Use the ball&Stick model. Disable the zeppelin compartment for single-shell data ($ball_stick)
