@@ -157,7 +157,7 @@ in_dwi_data = Channel
     .map{sid, bval, bvec, dwi, peaks -> 
         [tuple(sid, dwi),
         tuple(sid, bval, bvec, dwi, peaks)]}
-    .separate(3)
+    .separate(2)
 
 subjects_for_count.count().into{ number_subj_for_null_check; number_subj_for_compare_dwi; number_subj_for_compare_fodf; number_subj_for_compare_similarity}
 dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare }
@@ -235,8 +235,7 @@ ori_labels
     .concat(transformed_labels)
     .into{labels_for_transformation;labels_for_decompose}
 
-in_tracking
-    .into{tracking_for_decompose}
+in_tracking.set{tracking_for_decompose}
 
 tracking_for_decompose
     .join(labels_for_decompose)
