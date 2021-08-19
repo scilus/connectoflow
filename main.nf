@@ -153,12 +153,11 @@ in_dwi_data = Channel
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
-(dwi_for_count, data_for_kernels, data_for_commit) = in_dwi_data
+(dwi_for_count, data_for_commit) = in_dwi_data
     .map{sid, bval, bvec, dwi, peaks -> 
         [tuple(sid, dwi),
-        tuple(sid, bval, bvec, dwi, peaks),
         tuple(sid, bval, bvec, dwi, peaks)]}
-    .separate(3)
+    .separate(2)
 
 subjects_for_count.count().into{ number_subj_for_null_check; number_subj_for_compare_dwi; number_subj_for_compare_fodf; number_subj_for_compare_similarity}
 dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare }
@@ -236,8 +235,7 @@ ori_labels
     .concat(transformed_labels)
     .into{labels_for_transformation;labels_for_decompose}
 
-in_tracking
-    .into{tracking_for_decompose;tracking_for_kernel}
+in_tracking.set{tracking_for_decompose}
 
 tracking_for_decompose
     .join(labels_for_decompose)
@@ -284,60 +282,16 @@ process Decompose_Connectivity {
     """
 }
 
-data_for_kernels
-    .join(tracking_for_kernel)
-    .first()
-    .set{data_tracking_for_kernel}
-
-process Compute_Kernel {
-    cpus 1
-    memory params.decompose_memory_limit
-    publishDir = "${params.output_dir}/Compute_Kernel"
-
-    input:
-    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(trackings) from data_tracking_for_kernel
-
-    output:
-    file("kernels/") into kernel_for_commit
-
-    when:
-    run_commit
-
-    script:
-    ball_stick_arg = ""
-    perp_diff_arg = ""
-    if (params.ball_stick || params.use_commit2) {
-        ball_stick_arg="--ball_stick"
-    }
-    else {
-        perp_diff_arg="--perp_diff $params.perp_diff"
-    }
-    """
-    if [ `echo $trackings | wc -w` -gt 1 ]; then
-        scil_streamlines_math.py lazy_concatenate $trackings tracking_concat.trk
-    else
-        mv $trackings tracking_concat.trk
-    fi
-    scil_remove_invalid_streamlines.py tracking_concat.trk tracking_concat_ic.trk --remove_single --remove_overlapping
-
-    scil_run_commit.py tracking_concat_ic.trk $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
-        --processes 1 --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
-        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
-        --save_kernels kernels/ --compute_only
-    """
-}
-
 data_for_commit
     .join(h5_for_commit)
-    .combine(kernel_for_commit)
-    .set{data_tracking_kernel_for_commit}
+    .set{data_tracking_for_commit}
 
 process Run_COMMIT {
     cpus params.processes_commit
     memory params.commit_memory_limit
 
     input:
-    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(h5), file(kernels) from data_tracking_kernel_for_commit
+    set sid, file(bval), file(bvec), file(dwi), file(peaks), file(h5) from data_tracking_for_commit
 
     output:
     set sid, "${sid}__results_bzs/"
@@ -359,8 +313,7 @@ process Run_COMMIT {
     """
     scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
         --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \
-        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
-        --load_kernel $kernels
+        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
     mv "${sid}__results_bzs/commit_2/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
     }
@@ -368,8 +321,7 @@ process Run_COMMIT {
     """
     scil_run_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
-        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff \
-        --load_kernel $kernels
+        --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
     mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
     }
