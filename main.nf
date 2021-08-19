@@ -245,7 +245,7 @@ tracking_for_decompose
 
 process Decompose_Connectivity {
     cpus 1
-    memory { params.decompose_memory_limit * task.attempt }
+    memory { params.decompose_memory_limit * 4 }
 
     input:
     set sid, file(trackings), file(labels) from tracking_labels_for_decompose

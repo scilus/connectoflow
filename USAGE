@@ -14,24 +14,25 @@ The rest of the input (tracking, dwi, peaks, fodf and all metrics)
 must be in diffusion space with compatible headers. We recommand running the command 
 scil_verify_space_attributes_compatibility with the all the files mentioned above
 to ensure they are indeed in the same space.
-If this data comes from tractoflow: Make sure the dwi.nii.gz is from Resample_DWI/
-and the bval & bvec files in Eddy/
 
 It is mandatory that all grouped input either have identical prefix or no
 prefix at all.
 
 - *labels.nii.gz and t1.nii.gz must have the same prefix in order to be read properly.
-    t1 must overlay with the labels and be skull-strip. If you use Tractoflow using 
-    the same input T1w image it should come from tractoflow BET_T1 process.
+    t1 MUST overlay with the labels and MUST be skull-strip.
+    If you launched Tractoflow using the same input T1w image. Then, connectoflow 'expects'
+    the T1w from the BET_T1 process.
 
 - *dwi.nii.gz, *dwi.bval, *dwi.bvec, *fodf.nii.gz, *peaks.nii.gz must also have
 the same prefix in order to be read properly.
+    If you launched Tractoflow, the dwi.nii.gz comes from RESAMPLE_DWI and if you used
+    Eddy make sure to use the corrected bvecs from the EDDY process.
 
 - *tracking*.[fib,trk,tck] must also have the same prefix.
 This support multiple files (with suffixes).
 
 If you do not provide dwi.nii.gz/bval/bvec, use --run_commit false
-If you do not provide fodf/peaks.nii.gz, use --run_afd_rd false
+If you do not provide fodf, use --run_afd_rd false
 If you use a large number of cpu per node (e.g >20) makes sure the option
 --processes_avg_similarity is set to that number to use all the cpu of the node.
 
