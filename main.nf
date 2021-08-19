@@ -154,7 +154,7 @@ in_dwi_data = Channel
                     flat: true) {it.parent.name}
 
 (dwi_for_count, data_for_kernels, data_for_commit) = in_dwi_data
-    .map{sid, bval, bvec, dwi, peaks -> 
+    .map{sid, bval, bvec, dwi, peaks ->
         [tuple(sid, dwi),
         tuple(sid, bval, bvec, dwi, peaks),
         tuple(sid, bval, bvec, dwi, peaks)]}
@@ -245,7 +245,7 @@ tracking_for_decompose
 
 process Decompose_Connectivity {
     cpus 1
-    memory { params.decompose_memory_limit * task.attempt }
+    memory { 4 * trackings.size() }
 
     input:
     set sid, file(trackings), file(labels) from tracking_labels_for_decompose
@@ -423,7 +423,7 @@ process Register_Anat {
     script:
     """
     antsRegistrationSyNQuick.sh -d 3 -m ${native_anat} -f ${template} -n ${params.processes_register} -o "${sid}__output" -t s
-    """ 
+    """
 }
 
 in_opt_metrics
