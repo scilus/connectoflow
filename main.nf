@@ -593,6 +593,7 @@ process Compute_Connectivity_without_similiarity {
 
     output:
     set sid, "*.npy" into matrices_for_visualize_without_similarity
+    file "*.csv"
 
     script:
     String metrics_list = metrics.join(", ").replace(',', '')
