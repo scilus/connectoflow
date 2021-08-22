@@ -575,12 +575,10 @@ process Compute_Connectivity_without_similiarity {
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
         --parcel_volume $labels $labels_list
 
-    #!/usr/bin/env python
-    import numpy as np
-    for data in ["sc", "vol", "len", "sc_edge_normalized", "sc_vol_normalized"]:
-        curr_data = np.load(data + ".npy")
-        np.savetxt(data + ".csv", curr_data, delimiter=",")
+    template 'my_script.py'
     """
+
+
 }
 
 matrices_for_visualize_with_similarity
