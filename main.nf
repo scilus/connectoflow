@@ -503,7 +503,7 @@ process Compute_Connectivity_with_similiarity {
     set sid, file(h5), file(labels), file(metrics), file(avg_edges), file(labels_list) from h5_labels_similarity_list_for_compute
 
     output:
-    set sid, "*.npy" into matrices_for_visualize_with_similarity
+    set sid, "*.npy" into matrices_for_visualize_with_similarity, matrices_w_similarity_for_merge
 
     script:
     String metrics_list = metrics.join(", ").replace(',', '')
@@ -544,7 +544,7 @@ process Compute_Connectivity_without_similiarity {
     set sid, file(h5), file(labels), file(metrics), file(labels_list) from h5_labels_list_for_compute
 
     output:
-    set sid, "*.npy" into matrices_for_visualize_without_similarity
+    set sid, "*.npy" into matrices_for_visualize_without_similarity, matrices_wo_similarity_for_merge
 
     script:
     String metrics_list = metrics.join(", ").replace(',', '')
@@ -573,6 +573,37 @@ process Compute_Connectivity_without_similiarity {
         --parcel_volume $labels $labels_list
     scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
         --parcel_volume $labels $labels_list
+    """
+}
+
+matrices_w_similarity_for_merge
+  .mix(matrices_wo_similarity_for_merge)
+  .set{matrices_for_connectivity_in_csv}
+
+process Connectivity_in_csv {
+    cpus 1
+    publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
+
+    input:
+    set sid, file(matrices) from matrices_for_connectivity_in_csv
+
+    output:
+    file "*csv"
+
+    script:
+    String matrices_list = matrices.join("\",\"")
+    """
+    #!/usr/bin/env python3
+    import numpy as np
+    import os, sys
+
+    for data in ["$matrices_list"]:
+      fmt='%1.8f'
+      if 'sc' in data:
+        fmt='%i'
+
+      curr_data = np.load(data)
+      np.savetxt(data.replace(".npy", ".csv"), curr_data, delimiter=",", fmt=fmt)
     """
 }
 
