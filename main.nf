@@ -243,7 +243,7 @@ tracking_for_decompose
 
 process Decompose_Connectivity {
     cpus 1
-    memory { 4 * trackings.size() }
+    memory { 6 * trackings.size() }
 
     input:
     set sid, file(trackings), file(labels) from tracking_labels_for_decompose
