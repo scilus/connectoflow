@@ -584,15 +584,19 @@ process Connectivity_in_csv {
     cpus 1
 
     input:
-    set sid, file(matrices), file(labels_list) from matrices_for_connectivity_in_csv
+    set sid, file(matrices) from matrices_for_connectivity_in_csv
+
+    output:
+    file "*csv"
 
     script:
+    String matrices_list = matrices.join("\",\"")
     """
     #!/usr/bin/env python3
     import numpy as np
     import os, sys
 
-    for data in $matrices:
+    for data in ["$matrices_list"]:
       curr_data = np.load(data)
       np.savetxt(data.replace(".npy", ".csv"), curr_data, delimiter=",")
     """
