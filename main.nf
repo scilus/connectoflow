@@ -582,6 +582,7 @@ matrices_w_similarity_for_merge
 
 process Connectivity_in_csv {
     cpus 1
+    publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
     set sid, file(matrices) from matrices_for_connectivity_in_csv
