@@ -598,8 +598,12 @@ process Connectivity_in_csv {
     import os, sys
 
     for data in ["$matrices_list"]:
+      fmt='%1.8f'
+      if 'sc' in data:
+        fmt='%i'
+
       curr_data = np.load(data)
-      np.savetxt(data.replace(".npy", ".csv"), curr_data, delimiter=",")
+      np.savetxt(data.replace(".npy", ".csv"), curr_data, delimiter=",", fmt=fmt)
     """
 }
 
