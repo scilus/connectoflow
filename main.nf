@@ -212,6 +212,7 @@ else {
 
 process Transform_T1_Labels {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(anat), file(labels), file(mat), file(warp) from anat_for_transformation
@@ -243,7 +244,7 @@ tracking_for_decompose
 
 process Decompose_Connectivity {
     cpus 1
-    memory { 6 * trackings.size() }
+    memory { 7.B * trackings.size() }
 
     input:
     set sid, file(trackings), file(labels) from tracking_labels_for_decompose
@@ -338,6 +339,7 @@ h5_for_afd_rd
 
 process Compute_AFD_RD {
     cpus params.processes_afd_rd
+    memory '2 GB'
 
     input:
     set sid, file(h5), file(fodf) from h5_fodf_for_afd_rd
@@ -388,6 +390,7 @@ in_opt_metrics
     .set{metrics_transformation_for_metrics}
 process Transform_Metrics {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(metric), file(transfo), file(warp), file(inverse_warp), file(template) from metrics_transformation_for_metrics
@@ -433,6 +436,7 @@ h5_for_transformation
     .set{labels_tracking_transformation_for_data}
 process Transform_Data {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
@@ -457,6 +461,7 @@ h5_for_similarity
 
 process Average_Connections {
     cpus params.processes_avg_similarity
+    memory '2 GB'
     publishDir = "$params.avg_conn_output_dir"
 
     input:
@@ -497,6 +502,7 @@ else {
 
 process Compute_Connectivity_with_similiarity {
     cpus params.processes_connectivity
+    memory '2 GB'
     publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
@@ -538,6 +544,7 @@ process Compute_Connectivity_with_similiarity {
 
 process Compute_Connectivity_without_similiarity {
     cpus params.processes_connectivity
+    memory '2 GB'
     publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
@@ -582,6 +589,7 @@ matrices_w_similarity_for_merge
 
 process Connectivity_in_csv {
     cpus 1
+    memory '2 GB'
     publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
@@ -614,6 +622,7 @@ matrices_for_visualize_with_similarity
 
 process Visualize_Connectivity {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(matrices), file(labels_list) from matrices_labels_list_for_visualize
