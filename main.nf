@@ -607,7 +607,7 @@ process Connectivity_in_csv {
 
     for data in ["$matrices_list"]:
       fmt='%1.8f'
-      if 'sc' in data:
+      if data == 'sc.npy':
         fmt='%i'
 
       curr_data = np.load(data)
