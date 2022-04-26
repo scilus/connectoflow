@@ -576,13 +576,13 @@ process Compute_Connectivity_without_similiarity {
         --processes $params.processes_connectivity
 
     rm rd_fixel.npy -f
-    scil_normalize_connectivity.py sc.npy sc_edge_normalized.npy \
+    scil_normalize_connectivity.py sc.npy sc_parcel_vol_normalized.npy \
         --parcel_volume $labels $labels_list
-    scil_normalize_connectivity.py vol.npy sc_vol_normalized.npy \
-        --parcel_volume $labels $labels_list
+    scil_normalize_connectivity.py sc.npy sc_bundle_vol_normalized.npy \
+        --bundle_volume vol.npy
     """
 }
-
+ 
 matrices_w_similarity_for_merge
   .mix(matrices_wo_similarity_for_merge)
   .set{matrices_for_connectivity_in_csv}
