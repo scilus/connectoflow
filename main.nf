@@ -194,6 +194,12 @@ number_subj_for_compare_fodf
     .subscribe{a, b -> if (a != b && b > 0)
     error "Error ~ Mismatch between the number of subjects and FODF"}
 
+workflow.onComplete {
+    log.info "Pipeline completed at: $workflow.complete"
+    log.info "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+    log.info "Execution duration: $workflow.duration"
+}
+
 if (!params.apply_t1_labels_transfo) {
     in_t1
         .set{ori_anat}
