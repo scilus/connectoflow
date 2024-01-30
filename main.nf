@@ -194,6 +194,12 @@ number_subj_for_compare_fodf
     .subscribe{a, b -> if (a != b && b > 0)
     error "Error ~ Mismatch between the number of subjects and FODF"}
 
+workflow.onComplete {
+    log.info "Pipeline completed at: $workflow.complete"
+    log.info "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+    log.info "Execution duration: $workflow.duration"
+}
+
 if (!params.apply_t1_labels_transfo) {
     in_t1
         .set{ori_anat}
@@ -270,13 +276,7 @@ process Decompose_Connectivity {
         no_remove_outliers_arg = "--no_remove_outliers"
     }
     """
-    if [ `echo $trackings | wc -w` -gt 1 ]; then
-        scil_streamlines_math.py lazy_concatenate $trackings tracking_concat.trk
-    else
-        mv $trackings tracking_concat.trk
-    fi
-
-    scil_decompose_connectivity.py tracking_concat.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
+    scil_decompose_connectivity.py $trackings $labels "${sid}__decompose.h5" --no_remove_curv_dev \
         $no_pruning_arg $no_remove_loops_arg $no_remove_outliers_arg --min_length $params.min_length \
         --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
         --outlier_threshold $params.outlier_threshold
