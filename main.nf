@@ -571,22 +571,16 @@ process Compute_Connectivity_without_similiarity {
         fi
     done
 
-    scil_compute_connectivity.py $h5 $labels --force_labels_list $labels_list \
+    scil_connectivity_compute_matrices.py $h5 $labels --force_labels_list $labels_list \
         --volume vol.npy --streamline_count sc.npy \
         --length len.npy \$metrics_args --density_weighting \
         --no_self_connection --include_dps dps_matrices \$lesion_args \
         --processes $params.processes_connectivity
 
     rm rd_fixel.npy -f
-<<<<<<< HEAD
-    scil_connectivity_normalize.py sc.npy sc_edge_normalized.npy \
+    scil_connectivity_normalize.py sc.npy sc_parcel_vol_normalized.npy \
         --parcel_volume $labels $labels_list
-    scil_connectivity_normalize.py vol.npy sc_vol_normalized.npy \
-=======
-    scil_normalize_connectivity.py sc.npy sc_parcel_vol_normalized.npy \
->>>>>>> master
-        --parcel_volume $labels $labels_list
-    scil_normalize_connectivity.py sc.npy sc_bundle_vol_normalized.npy \
+    scil_connectivity_normalize.py sc.npy sc_bundle_vol_normalized.npy \
         --bundle_volume vol.npy
     """
 }
