@@ -174,13 +174,15 @@ number_subj_for_compare_similarity
 
 run_commit = params.run_commit
 dwi_for_null_check
-.subscribe{a -> if (a == 0)
+.subscribe{a -> if (a == 0 && params.run_commit)
     run_commit = false}
+    log.warn "Warning ~ No DWI or peaks found. COMMIT will not be run."
 
 run_afd_rd = params.run_afd_rd
 fodf_for_null_check
-.subscribe{a -> if (a == 0)
+.subscribe{a -> if (a == 0 && params.run_afd_rd)
     run_afd_rd = false}
+    log.warn "Warning ~ No FODF found. AFD & RD will not be run."
 
 number_subj_for_compare_dwi
     .concat(dwi_for_compare)
@@ -193,6 +195,12 @@ number_subj_for_compare_fodf
     .toList()
     .subscribe{a, b -> if (a != b && b > 0)
     error "Error ~ Mismatch between the number of subjects and FODF"}
+
+workflow.onComplete {
+    log.info "Pipeline completed at: $workflow.complete"
+    log.info "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
+    log.info "Execution duration: $workflow.duration"
+}
 
 if (!params.apply_t1_labels_transfo) {
     in_t1
@@ -212,6 +220,7 @@ else {
 
 process Transform_T1_Labels {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(anat), file(labels), file(mat), file(warp) from anat_for_transformation
@@ -243,7 +252,7 @@ tracking_for_decompose
 
 process Decompose_Connectivity {
     cpus 1
-    memory { 6 * trackings.size() }
+    memory { 7.B * trackings.size() }
 
     input:
     set sid, file(trackings), file(labels) from tracking_labels_for_decompose
@@ -269,13 +278,7 @@ process Decompose_Connectivity {
         no_remove_outliers_arg = "--no_remove_outliers"
     }
     """
-    if [ `echo $trackings | wc -w` -gt 1 ]; then
-        scil_tractogram_math.py lazy_concatenate $trackings tracking_concat.trk
-    else
-        mv $trackings tracking_concat.trk
-    fi
-
-    scil_tractogram_segment_connections_from_labels.py tracking_concat.trk $labels "${sid}__decompose.h5" --no_remove_curv_dev \
+    scil_tractogram_segment_connections_from_labels.py $trackings $labels "${sid}__decompose.h5" --no_remove_curv_dev \
         $no_pruning_arg $no_remove_loops_arg $no_remove_outliers_arg --min_length $params.min_length \
         --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
         --outlier_threshold $params.outlier_threshold
@@ -338,6 +341,7 @@ h5_for_afd_rd
 
 process Compute_AFD_RD {
     cpus params.processes_afd_rd
+    memory '2 GB'
 
     input:
     set sid, file(h5), file(fodf) from h5_fodf_for_afd_rd
@@ -388,6 +392,7 @@ in_opt_metrics
     .set{metrics_transformation_for_metrics}
 process Transform_Metrics {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(metric), file(transfo), file(warp), file(inverse_warp), file(template) from metrics_transformation_for_metrics
@@ -433,6 +438,7 @@ h5_for_transformation
     .set{labels_tracking_transformation_for_data}
 process Transform_Data {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(h5), file(labels), file(transfo), file(warp), file(inverse_warp), file(template) from labels_tracking_transformation_for_data
@@ -457,6 +463,7 @@ h5_for_similarity
 
 process Average_Connections {
     cpus params.processes_avg_similarity
+    memory '2 GB'
     publishDir = "$params.avg_conn_output_dir"
 
     input:
@@ -497,6 +504,7 @@ else {
 
 process Compute_Connectivity_with_similiarity {
     cpus params.processes_connectivity
+    memory '2 GB'
     publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
@@ -538,6 +546,7 @@ process Compute_Connectivity_with_similiarity {
 
 process Compute_Connectivity_without_similiarity {
     cpus params.processes_connectivity
+    memory '2 GB'
     publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
@@ -569,19 +578,26 @@ process Compute_Connectivity_without_similiarity {
         --processes $params.processes_connectivity
 
     rm rd_fixel.npy -f
+<<<<<<< HEAD
     scil_connectivity_normalize.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_connectivity_normalize.py vol.npy sc_vol_normalized.npy \
+=======
+    scil_normalize_connectivity.py sc.npy sc_parcel_vol_normalized.npy \
+>>>>>>> master
         --parcel_volume $labels $labels_list
+    scil_normalize_connectivity.py sc.npy sc_bundle_vol_normalized.npy \
+        --bundle_volume vol.npy
     """
 }
-
+ 
 matrices_w_similarity_for_merge
   .mix(matrices_wo_similarity_for_merge)
   .set{matrices_for_connectivity_in_csv}
 
 process Connectivity_in_csv {
     cpus 1
+    memory '2 GB'
     publishDir = {"${params.output_dir}/$sid/Compute_Connectivity"}
 
     input:
@@ -599,7 +615,7 @@ process Connectivity_in_csv {
 
     for data in ["$matrices_list"]:
       fmt='%1.8f'
-      if 'sc' in data:
+      if data == 'sc.npy':
         fmt='%i'
 
       curr_data = np.load(data)
@@ -614,6 +630,7 @@ matrices_for_visualize_with_similarity
 
 process Visualize_Connectivity {
     cpus 1
+    memory '2 GB'
 
     input:
     set sid, file(matrices), file(labels_list) from matrices_labels_list_for_visualize
