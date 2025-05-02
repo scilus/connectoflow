@@ -465,6 +465,7 @@ process Average_Connections {
     cpus params.processes_avg_similarity
     memory '2 GB'
     publishDir = "$params.avg_conn_output_dir"
+    tag "Per edges"
 
     input:
     file(all_h5) from all_h5_for_similarity
