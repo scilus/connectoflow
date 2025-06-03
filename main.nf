@@ -169,20 +169,20 @@ number_subj_for_null_check
 
 number_subj_for_compare_similarity
 .subscribe{a -> if (a < params.nbr_subjects_for_avg_connections && params.use_similarity_metric)
-    error "Error --nbr_subjects_for_avg_connections is higher than the number of subjects. Please modify it or use --he number of subjects. Please modify it or use --use_similarity_metric"}
+    error "Error --nbr_subjects_for_avg_connections is higher than the number of subjects. Please modify it or use --use_similarity_metric"}
 
 
 run_commit = params.run_commit
 dwi_for_null_check
-.subscribe{a -> if (a == 0 && params.run_commit)
-    run_commit = false}
-    log.warn "Warning ~ No DWI or peaks found. COMMIT will not be run."
+.subscribe{a -> if (a == 0 && params.run_commit){
+    run_commit = false
+    log.warn "Warning ~ No DWI or peaks found. COMMIT will not be run."}}
 
 run_afd_rd = params.run_afd_rd
 fodf_for_null_check
-.subscribe{a -> if (a == 0 && params.run_afd_rd)
-    run_afd_rd = false}
-    log.warn "Warning ~ No FODF found. AFD & RD will not be run."
+.subscribe{a -> if (a == 0 && params.run_afd_rd){
+    run_afd_rd = false
+    log.warn "Warning ~ No FODF found. AFD & RD will not be run."}}
 
 number_subj_for_compare_dwi
     .concat(dwi_for_compare)
@@ -251,7 +251,7 @@ tracking_for_decompose
     .set{tracking_labels_for_decompose}
 
 process Decompose_Connectivity {
-    cpus 1
+    cpus params.processes_connectivity
     memory { 7.B * trackings.size() }
 
     input:
@@ -281,7 +281,7 @@ process Decompose_Connectivity {
     scil_tractogram_segment_connections_from_labels.py $trackings $labels "${sid}__decompose.h5" --no_remove_curv_dev \
         $no_pruning_arg $no_remove_loops_arg $no_remove_outliers_arg --min_length $params.min_length \
         --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
-        --outlier_threshold $params.outlier_threshold
+        --outlier_threshold $params.outlier_threshold --processes $params.processes_connectivity
     """
 }
 
