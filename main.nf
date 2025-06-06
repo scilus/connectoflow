@@ -160,10 +160,8 @@ in_dwi_data = Channel
     .separate(2)
 
 subjects_for_count.count().into{ number_subj_for_null_check; number_subj_for_compare_dwi; number_subj_for_compare_fodf; number_subj_for_compare_similarity}
-dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare;toto }
+dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare }
 fodf_for_count.count().into{ fodf_for_null_check; fodf_for_compare }
-
-toto.println()
 
 number_subj_for_null_check
 .subscribe{a -> if (a == 0)
@@ -175,6 +173,7 @@ number_subj_for_compare_similarity
 
 
 run_commit = params.run_commit
+
 dwi_for_null_check
 .subscribe{a -> if (a == 0 && params.run_commit){
     run_commit = false
@@ -316,6 +315,9 @@ process Run_COMMIT {
     }
     if (params.use_commit2) {
     """
+    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=
+    export OPENBLAS_NUM_THREADS=1
+
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
         --processes $params.processes_commit --tolerance $params.b_tol --nbr_dir $params.nbr_dir \
         --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
@@ -324,6 +326,9 @@ process Run_COMMIT {
     }
     else {
     """
+    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=
+    export OPENBLAS_NUM_THREADS=1
+
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes $params.processes_commit --tolerance $params.b_tol --nbr_dir $params.nbr_dir $ball_stick_arg \
         --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
