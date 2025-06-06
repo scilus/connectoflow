@@ -8,7 +8,7 @@ if(params.help) {
                 "output_dir":"$params.output_dir",
                 "run_commit":"$params.run_commit",
                 "use_commit2":"$params.use_commit2",
-                "b_thr":"$params.b_thr",
+                "b_tol":"$params.b_tol",
                 "nbr_dir":"$params.nbr_dir",
                 "ball_stick":"$params.ball_stick",
                 "para_diff":"$params.para_diff",
@@ -70,7 +70,7 @@ log.info "======="
 log.info "Apply transformation: $params.apply_t1_labels_transfo"
 log.info "Run COMMIT: $params.run_commit"
 log.info "Use COMMIT2: $params.use_commit2"
-log.info "bval tolerance: $params.b_thr"
+log.info "bval tolerance: $params.b_tol"
 log.info "Nbr directions: $params.nbr_dir"
 log.info "Ball & Stick: $params.ball_stick"
 log.info "Parallel diffusion: $params.para_diff"
@@ -160,8 +160,10 @@ in_dwi_data = Channel
     .separate(2)
 
 subjects_for_count.count().into{ number_subj_for_null_check; number_subj_for_compare_dwi; number_subj_for_compare_fodf; number_subj_for_compare_similarity}
-dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare }
+dwi_for_count.count().into{ dwi_for_null_check; dwi_for_compare;toto }
 fodf_for_count.count().into{ fodf_for_null_check; fodf_for_compare }
+
+toto.println()
 
 number_subj_for_null_check
 .subscribe{a -> if (a == 0)
@@ -315,7 +317,7 @@ process Run_COMMIT {
     if (params.use_commit2) {
     """
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
-        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir \
+        --processes $params.processes_commit --tolerance $params.b_tol --nbr_dir $params.nbr_dir \
         --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
     mv "${sid}__results_bzs/commit_2/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
@@ -323,7 +325,7 @@ process Run_COMMIT {
     else {
     """
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
-        --processes $params.processes_commit --b_thr $params.b_thr --nbr_dir $params.nbr_dir $ball_stick_arg \
+        --processes $params.processes_commit --tolerance $params.b_tol --nbr_dir $params.nbr_dir $ball_stick_arg \
         --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
     mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
     """
