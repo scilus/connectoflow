@@ -82,7 +82,7 @@ OPTIONAL ARGUMENTS (current value)
     --run_commit                                Run COMMIT1 on the tractogram ($run_commit)
     --use_commit2                               Use COMMIT2 rather than the original COMMIT1 
                                                     (will replace the COMMIT1 output with COMMIT2) ($use_commit2)
-    --b_thr                                     Tolerance value to match b-value is on the same shell ($b_thr)
+    --b_tol                                     Tolerance value to match b-value is on the same shell ($b_tol)
     --nbr_dir                                   Number of directions, (half sphere), representing the possible orientations of the response functions ($nbr_dir)
     --ball_stick                                Use the ball&Stick model. Disable the zeppelin compartment for single-shell data ($ball_stick)
     --para_diff                                 Parallel diffusivity in mm^2/s ($para_diff)
