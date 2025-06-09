@@ -315,7 +315,7 @@ process Run_COMMIT {
     }
     if (params.use_commit2) {
     """
-    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=
+    unset ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
     export OPENBLAS_NUM_THREADS=1
 
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
@@ -326,7 +326,7 @@ process Run_COMMIT {
     }
     else {
     """
-    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=
+    unset ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
     export OPENBLAS_NUM_THREADS=1
 
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
