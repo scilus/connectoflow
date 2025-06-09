@@ -545,6 +545,7 @@ process Compute_Connectivity_with_similiarity {
         --processes $params.processes_connectivity
 
     rm rd_fixel.npy -f
+    mv dps_matrices/*npy ./
     scil_connectivity_normalize.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_connectivity_normalize.py vol.npy sc_vol_normalized.npy \
