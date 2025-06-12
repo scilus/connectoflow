@@ -315,7 +315,7 @@ process Run_COMMIT {
     }
     if (params.use_commit2) {
     """
-    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=
+    unset ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
     export OPENBLAS_NUM_THREADS=1
 
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
@@ -326,7 +326,7 @@ process Run_COMMIT {
     }
     else {
     """
-    export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=
+    unset ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
     export OPENBLAS_NUM_THREADS=1
 
     scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
@@ -544,7 +544,7 @@ process Compute_Connectivity_with_similiarity {
         --include_dps dps_matrices \$lesion_args --min_lesion_vol $params.min_lesion_vol \
         --processes $params.processes_connectivity
 
-    rm rd_fixel.npy -f
+    mv dps_matrices/*npy ./
     scil_connectivity_normalize.py sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_connectivity_normalize.py vol.npy sc_vol_normalized.npy \
@@ -585,7 +585,7 @@ process Compute_Connectivity_without_similiarity {
         --no_self_connection --include_dps dps_matrices \$lesion_args \
         --processes $params.processes_connectivity
 
-    rm rd_fixel.npy -f
+    mv dps_matrices/*npy ./
     scil_connectivity_normalize.py sc.npy sc_parcel_vol_normalized.npy \
         --parcel_volume $labels $labels_list
     scil_connectivity_normalize.py sc.npy sc_bundle_vol_normalized.npy \
