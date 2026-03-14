@@ -117,6 +117,7 @@ Channel
 in_transfo = Channel
     .fromFilePairs("$root/**/{*0GenericAffine.mat,*1Warp.nii.gz}",
                     size: 2,
+                    sort: true,
                     maxDepth:1,
                     flat: true) {it.parent.name}
 
@@ -224,7 +225,7 @@ process Transform_T1_Labels {
     memory '2 GB'
 
     input:
-    set sid, file(anat), file(labels), file(mat), file(warp) from anat_for_transformation
+    set sid, file(anat), file(labels), file(warp), file(mat) from anat_for_transformation
 
     output:
     set sid, "${sid}__labels_warped_int16.nii.gz" into transformed_labels
@@ -234,7 +235,7 @@ process Transform_T1_Labels {
     """
     antsApplyTransforms -d 3 -i $anat -r $warp -o "${sid}__t1_warped.nii.gz" -t $warp $mat -n Linear
     antsApplyTransforms -d 3 -i $labels -r $warp -o labels_warped.nii.gz -t $warp $mat -n NearestNeighbor
-    scil_volume_math.py convert labels_warped.nii.gz "${sid}__labels_warped_int16.nii.gz" --data_type int16
+    scil_volume_math convert labels_warped.nii.gz "${sid}__labels_warped_int16.nii.gz" --data_type int16
     """
 }
 
@@ -279,7 +280,7 @@ process Decompose_Connectivity {
         no_remove_outliers_arg = "--no_remove_outliers"
     }
     """
-    scil_tractogram_segment_connections_from_labels.py $trackings $labels "${sid}__decompose.h5" --no_remove_curv_dev \
+    scil_tractogram_segment_connections_from_labels $trackings $labels "${sid}__decompose.h5" --no_remove_curv_dev \
         $no_pruning_arg $no_remove_loops_arg $no_remove_outliers_arg --min_length $params.min_length \
         --max_length $params.max_length --loop_max_angle $params.loop_max_angle \
         --outlier_threshold $params.outlier_threshold --processes $params.processes_connectivity
@@ -318,7 +319,7 @@ process Run_COMMIT {
     unset ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
     export OPENBLAS_NUM_THREADS=1
 
-    scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
+    scil_tractogram_commit $h5 $dwi $bval $bvec "${sid}__results_bzs/" --ball_stick --commit2 --in_peaks $peaks \
         --processes $params.processes_commit --tolerance $params.b_tol --nbr_dir $params.nbr_dir \
         --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
     mv "${sid}__results_bzs/commit_2/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
@@ -329,7 +330,7 @@ process Run_COMMIT {
     unset ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
     export OPENBLAS_NUM_THREADS=1
 
-    scil_tractogram_commit.py $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
+    scil_tractogram_commit $h5 $dwi $bval $bvec "${sid}__results_bzs/" --in_peaks $peaks \
         --processes $params.processes_commit --tolerance $params.b_tol --nbr_dir $params.nbr_dir $ball_stick_arg \
         --para_diff $params.para_diff $perp_diff_arg --iso_diff $params.iso_diff
     mv "${sid}__results_bzs/commit_1/decompose_commit.h5" ./"${sid}__decompose_commit.h5"
@@ -365,7 +366,7 @@ process Compute_AFD_RD {
         length_weighting_arg = "--length_weighting"
     }
     """
-    scil_bundle_mean_fixel_afd_from_hdf5.py $h5 $fodf "${sid}__decompose_afd_rd.h5" $length_weighting_arg \
+    scil_bundle_mean_fixel_afd_from_hdf5 $h5 $fodf "${sid}__decompose_afd_rd.h5" $length_weighting_arg \
         --sh_basis $params.sh_basis --processes $params.processes_afd_rd
     """
 }
@@ -430,7 +431,7 @@ process Transform_Lesions {
     script:
     """
     antsApplyTransforms -d 3 -i $lesion -r $template -t $warp $transfo -o ${lesion.getSimpleName()}_mni.nii.gz -n NearestNeighbor
-    scil_volume_math.py convert lesion_mask_mni.nii.gz lesion_mask_mni.nii.gz --data_type uint8 -f
+    scil_volume_math convert lesion_mask_mni.nii.gz lesion_mask_mni.nii.gz --data_type uint8 -f
     """
 }
 
@@ -456,9 +457,9 @@ process Transform_Data {
 
     script:
     """
-    scil_tractogram_apply_transform_to_hdf5.py $h5 $template ${transfo} "${sid}__decompose_warped_mni.h5" --inverse --in_deformation $inverse_warp
+    scil_tractogram_apply_transform_to_hdf5 $h5 $template ${transfo} "${sid}__decompose_warped_mni.h5" --inverse --in_deformation $inverse_warp
     antsApplyTransforms -d 3 -i $labels -r $template -t $warp $transfo -n NearestNeighbor -o labels_mni.nii.gz
-    scil_volume_math.py convert labels_mni.nii.gz "${sid}__labels_warped_mni_int16.nii.gz" --data_type int16
+    scil_volume_math convert labels_mni.nii.gz "${sid}__labels_warped_mni_int16.nii.gz" --data_type int16
     """
 }
 
@@ -485,7 +486,7 @@ process Average_Connections {
 
     script:
     """
-    scil_connectivity_hdf5_average_density_map.py $all_h5 avg_per_edges/ --binary --processes $params.processes_avg_similarity
+    scil_connectivity_hdf5_average_density_map $all_h5 avg_per_edges/ --binary --processes $params.processes_avg_similarity
     """
 }
 
@@ -537,7 +538,7 @@ process Compute_Connectivity_with_similiarity {
         fi
     done
 
-    scil_connectivity_compute_matrices.py $h5 $labels --force_labels_list $labels_list \
+    scil_connectivity_compute_matrices $h5 $labels --force_labels_list $labels_list \
         --volume vol.npy --streamline_count sc.npy \
         --length len.npy --similarity $avg_edges sim.npy \$metrics_args \
         --density_weighting --no_self_connection \
@@ -545,9 +546,9 @@ process Compute_Connectivity_with_similiarity {
         --processes $params.processes_connectivity
 
     mv dps_matrices/*npy ./
-    scil_connectivity_normalize.py sc.npy sc_edge_normalized.npy \
+    scil_connectivity_normalize sc.npy sc_edge_normalized.npy \
         --parcel_volume $labels $labels_list
-    scil_connectivity_normalize.py vol.npy sc_vol_normalized.npy \
+    scil_connectivity_normalize vol.npy sc_vol_normalized.npy \
         --parcel_volume $labels $labels_list
     """
 }
@@ -579,16 +580,16 @@ process Compute_Connectivity_without_similiarity {
         fi
     done
 
-    scil_connectivity_compute_matrices.py $h5 $labels --force_labels_list $labels_list \
+    scil_connectivity_compute_matrices $h5 $labels --force_labels_list $labels_list \
         --volume vol.npy --streamline_count sc.npy \
         --length len.npy \$metrics_args --density_weighting \
         --no_self_connection --include_dps dps_matrices \$lesion_args \
         --processes $params.processes_connectivity
 
     mv dps_matrices/*npy ./
-    scil_connectivity_normalize.py sc.npy sc_parcel_vol_normalized.npy \
+    scil_connectivity_normalize sc.npy sc_parcel_vol_normalized.npy \
         --parcel_volume $labels $labels_list
-    scil_connectivity_normalize.py sc.npy sc_bundle_vol_normalized.npy \
+    scil_connectivity_normalize sc.npy sc_bundle_vol_normalized.npy \
         --bundle_volume vol.npy
     """
 }
@@ -644,7 +645,7 @@ process Visualize_Connectivity {
     String matrices_list = matrices.join(", ").replace(',', '')
     """
     for matrix in $matrices_list; do
-        scil_viz_connectivity.py \$matrix \${matrix/.npy/_matrix.png} --labels_list $labels_list --name_axis \
+        scil_viz_connectivity \$matrix \${matrix/.npy/_matrix.png} --labels_list $labels_list --name_axis \
             --display_legend --histogram \${matrix/.npy/_hist.png} --nb_bins 50 --exclude_zeros --axis_text_size 5 5
     done
     """
